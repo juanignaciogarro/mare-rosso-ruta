@@ -922,9 +922,13 @@ function initNextRowGestures() {
     const id = parseInt(row.dataset.clientId, 10);
     let downAt = 0;
     row.addEventListener('pointerdown', () => { downAt = Date.now(); });
-    row.addEventListener('pointerup', () => {
-      if (!downAt) return;
-      const held = Date.now() - downAt;
+    row.addEventListener('pointerleave', () => { downAt = 0; });
+    row.addEventListener('pointercancel', () => { downAt = 0; });
+    // La decisión (y el window.open) van en 'click', no en 'pointerup': Safari no siempre
+    // trata pointerup como gesto de usuario válido para permitir abrir una ventana/app
+    // externa, y el popup se bloquea en silencio. 'click' sí lo garantiza en WebKit.
+    row.addEventListener('click', () => {
+      const held = downAt ? Date.now() - downAt : 0;
       downAt = 0;
       const stop = STOPS_BY_ID[id];
       if (!stop) return;
@@ -934,8 +938,6 @@ function initNextRowGestures() {
         selectStop(id);
       }
     });
-    row.addEventListener('pointerleave', () => { downAt = 0; });
-    row.addEventListener('pointercancel', () => { downAt = 0; });
   });
 }
 
