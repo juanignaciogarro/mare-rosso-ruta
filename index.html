@@ -901,9 +901,9 @@ function render() {
         <button class="chevron-btn" onclick="openRouteOverlay()" title="Ver ruta completa">${iconChevron(48)}</button>
       </div>` : `<div class="next-block"><button class="chevron-btn" onclick="openRouteOverlay()" title="Ver ruta completa">${iconChevron(48)}</button></div>`}
       <div class="action-bar">
-        <button id="msg-btn" class="round-btn" title="Mensaje">${iconMessage(56)}</button>
-        <button id="call-btn" class="round-btn" title="Llamar">${iconCall(56)}</button>
-        <button id="egg-btn" class="egg-btn" title="Confirmar entrega">${iconEggConfirm(76)}</button>
+        <button id="msg-btn" class="round-btn" title="Mensaje">${iconMessage(112)}</button>
+        <button id="call-btn" class="round-btn" title="Llamar">${iconCall(112)}</button>
+        <button id="egg-btn" class="egg-btn" title="Confirmar entrega">${iconEggConfirm(152)}</button>
       </div>
     </div>`;
 
@@ -921,15 +921,9 @@ function initNextRowGestures() {
   document.querySelectorAll('.next-row').forEach(row => {
     const id = parseInt(row.dataset.clientId, 10);
     let downAt = 0;
-    row.addEventListener('pointerdown', () => { downAt = Date.now(); });
-    row.addEventListener('pointerleave', () => { downAt = 0; });
-    row.addEventListener('pointercancel', () => { downAt = 0; });
-    // La decisión (y el window.open) van en 'click', no en 'pointerup': Safari no siempre
-    // trata pointerup como gesto de usuario válido para permitir abrir una ventana/app
-    // externa, y el popup se bloquea en silencio. 'click' sí lo garantiza en WebKit.
-    row.addEventListener('click', () => {
-      const held = downAt ? Date.now() - downAt : 0;
-      downAt = 0;
+    let handledByTouch = false;
+
+    function act(held) {
       const stop = STOPS_BY_ID[id];
       if (!stop) return;
       if (held >= LONG_PRESS_MS) {
@@ -937,6 +931,28 @@ function initNextRowGestures() {
       } else {
         selectStop(id);
       }
+    }
+
+    // En iOS, el propio reconocedor de gestos de "mantener presionado" (para selección de
+    // texto / lupa) suele mandar un pointercancel a mitad del toque — incluso con la
+    // selección deshabilitada — lo que reiniciaba el cronómetro antes de soltar. touchstart/
+    // touchend no sufren eso y, al igual que click, cuentan como gesto de usuario válido
+    // para abrir Waze sin que el bloqueador de pop-ups de Safari lo descarte.
+    row.addEventListener('touchstart', () => { downAt = Date.now(); }, { passive: true });
+    row.addEventListener('touchend', () => {
+      if (!downAt) return;
+      const held = Date.now() - downAt;
+      downAt = 0;
+      handledByTouch = true;
+      act(held);
+    });
+    // Respaldo para mouse/trackpad (pruebas de escritorio): pointerdown mide, click decide.
+    row.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'touch') downAt = Date.now(); });
+    row.addEventListener('click', () => {
+      if (handledByTouch) { handledByTouch = false; return; }
+      const held = downAt ? Date.now() - downAt : 0;
+      downAt = 0;
+      act(held);
     });
   });
 }
