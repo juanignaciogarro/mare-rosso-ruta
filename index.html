@@ -201,6 +201,34 @@
   }
   .filter-switch button.active { background: var(--orange); color: #1a1a1a; }
 
+  .flash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .flash-title { font-size: 19px; font-weight: 800; }
+  .flash-field { margin-bottom: 14px; }
+  .flash-field label { display: block; font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.6); margin-bottom: 6px; }
+  .flash-input {
+    width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); border-radius: 12px;
+    padding: 12px 14px; color: #fff; font-size: 16px; font-family: inherit;
+  }
+  .flash-input::placeholder { color: rgba(255,255,255,0.35); }
+  .flash-row { display: flex; gap: 10px; }
+  .flash-qty { max-width: 90px; text-align: center; flex-shrink: 0; }
+  .flash-seg { display: flex; flex: 1; background: rgba(255,255,255,0.1); border-radius: 12px; padding: 3px; }
+  .flash-seg button {
+    flex: 1; border: none; background: none; color: rgba(255,255,255,0.7); padding: 10px 6px;
+    border-radius: 9px; font-weight: 700; cursor: pointer; font-family: inherit; font-size: 13px;
+  }
+  .flash-seg button.active { background: var(--orange); color: #1a1a1a; }
+  .flash-checkbox-row {
+    display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600;
+    margin: 4px 0 20px; cursor: pointer;
+  }
+  .flash-checkbox-row input { width: 20px; height: 20px; flex-shrink: 0; }
+  .flash-save-btn {
+    width: 100%; padding: 16px; border-radius: 16px; border: none;
+    background: var(--orange); color: #1a1a1a; font-weight: 800; font-size: 16px;
+    cursor: pointer; font-family: inherit;
+  }
+
   #toast {
     position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%);
     background: var(--ink); border: none; color: #fff;
@@ -234,6 +262,50 @@
       <button data-filter="pendientes" onclick="setRouteFilter('pendientes')">Pendientes</button>
       <button data-filter="entregados" onclick="setRouteFilter('entregados')">Entregados</button>
     </div>
+  </div>
+</div>
+
+<div id="flash-overlay" class="overlay-backdrop" onclick="if(event.target===this) closeFlashOverlay()">
+  <div class="overlay-card">
+    <div class="flash-header">
+      <div class="flash-title">⚡ Entrega flash</div>
+      <button class="round-btn dark sm" title="Cerrar" onclick="closeFlashOverlay()">✕</button>
+    </div>
+    <div class="flash-field">
+      <label>Nombre</label>
+      <input id="flash-nombre" class="flash-input" placeholder="Nombre del cliente">
+    </div>
+    <div class="flash-field">
+      <label>Teléfono (opcional)</label>
+      <input id="flash-tel" class="flash-input" type="tel" placeholder="8888 8888">
+    </div>
+    <div class="flash-field">
+      <label>Zona</label>
+      <input id="flash-zona" class="flash-input" placeholder="Zona">
+    </div>
+    <div class="flash-field">
+      <label>Dirección / nota</label>
+      <input id="flash-notas" class="flash-input" placeholder="Condominio, casa, portón…">
+    </div>
+    <div class="flash-field">
+      <label>Cartón grande</label>
+      <div class="flash-row">
+        <div class="flash-seg">
+          <button type="button" data-t30="gsp" onclick="setFlashT30('gsp')">Sin plástico</button>
+          <button type="button" data-t30="gcp" class="active" onclick="setFlashT30('gcp')">Con plástico</button>
+        </div>
+        <input id="flash-q30" class="flash-input flash-qty" type="number" inputmode="numeric" min="0" value="1">
+      </div>
+    </div>
+    <div class="flash-field">
+      <label>Cartón pequeño (P-CP)</label>
+      <input id="flash-q15" class="flash-input flash-qty" type="number" inputmode="numeric" min="0" value="0">
+    </div>
+    <label class="flash-checkbox-row">
+      <input id="flash-add-crm" type="checkbox">
+      Agregar como cliente permanente
+    </label>
+    <button class="flash-save-btn" onclick="saveFlashDelivery()">Registrar entrega</button>
   </div>
 </div>
 
@@ -437,6 +509,13 @@ function iconRefresh(size) {
 <path d="M61.5749 26.2812C61.6372 26.3314 61.6996 26.3817 61.7638 26.4335C63.2185 27.6118 64.5287 28.9027 65.677 30.3833C65.6787 30.2807 65.6787 30.2807 65.6804 30.176C65.7375 27.3405 65.7375 27.3405 66.4558 26.5334C67.1485 25.8951 67.795 25.7575 68.7235 25.7757C69.4238 25.8485 69.8467 26.118 70.3433 26.6035C70.8754 27.394 71.0036 28.0846 70.9968 29.0142C70.9977 29.1716 70.9977 29.1716 70.9986 29.3322C71.0002 29.6765 70.9992 30.0207 70.998 30.365C70.9982 30.6058 70.9986 30.8466 70.999 31.0874C70.9995 31.591 70.9988 32.0946 70.9971 32.5983C70.9951 33.2422 70.9963 33.8861 70.9984 34.5301C70.9996 35.027 70.9992 35.5239 70.9983 36.0208C70.9981 36.2582 70.9984 36.4956 70.9992 36.733C71.0001 37.0653 70.9987 37.3976 70.9968 37.7299C70.9975 37.827 70.9982 37.9241 70.9989 38.0241C70.9893 38.9107 70.7764 39.7002 70.1308 40.3458C69.3605 40.8785 68.7225 40.9496 67.8064 40.9525C67.7019 40.9533 67.5974 40.9541 67.4897 40.9549C67.144 40.9572 66.7983 40.9585 66.4526 40.9597C66.2751 40.9604 66.2751 40.9604 66.0939 40.9612C65.4672 40.9636 64.8404 40.9653 64.2136 40.9664C63.5681 40.9677 62.9226 40.9717 62.2771 40.9764C61.7791 40.9794 61.2812 40.9804 60.7833 40.9808C60.5454 40.9814 60.3076 40.9828 60.0698 40.9849C57.3643 41.0082 57.3643 41.0082 56.5457 40.2578C55.9049 39.5781 55.7772 38.919 55.7952 38.0026C55.868 37.3022 56.1374 36.8793 56.623 36.3828C57.4359 35.8356 58.154 35.7217 59.1099 35.7148C59.2178 35.7127 59.3258 35.7106 59.437 35.7084C59.7785 35.7021 60.1199 35.6981 60.4614 35.6942C60.6943 35.6903 60.9272 35.6862 61.1601 35.6821C61.7281 35.6721 62.2961 35.6643 62.8641 35.6576C62.7001 35.3981 62.5355 35.1391 62.3706 34.8802C62.3248 34.8077 62.279 34.7352 62.2319 34.6605C61.7907 33.9695 61.2898 33.3486 60.7544 32.7274C60.6833 32.6419 60.6121 32.5564 60.5388 32.4683C60.0675 31.9105 59.5552 31.4378 58.9964 30.9694C58.8953 30.8801 58.7942 30.7908 58.6901 30.6988C54.6231 27.1712 49.4065 25.7908 44.1113 26.0467C38.8801 26.444 33.9503 29.1221 30.5511 33.076C28.6065 35.4399 27.3906 38.1382 26.5916 41.0752C26.3674 41.8675 26.1129 42.4943 25.4419 43.0154C24.6259 43.4206 23.8754 43.577 22.9838 43.3153C22.2946 43.0133 21.791 42.4983 21.4752 41.8177C20.7441 39.6607 22.5013 36.3517 23.4535 34.41C24.5086 32.3303 25.8793 30.4441 27.4682 28.7425C27.6466 28.5399 27.8248 28.3372 28.003 28.1345C28.4596 27.6292 28.9329 27.1795 29.4607 26.75C29.5773 26.6537 29.694 26.5575 29.8142 26.4583C33.5867 23.3903 38.1978 21.3743 43.0565 20.8897C43.1707 20.8769 43.2849 20.864 43.4026 20.8508C49.911 20.225 56.5019 22.1493 61.5749 26.2812Z" fill="#1E1E1E"/>
 <path d="M69.0017 48.4988C69.6725 48.893 70.1159 49.4585 70.3642 50.191C70.8203 52.6119 69.0171 55.845 67.9029 57.9265C67.8653 57.9972 67.8277 58.0679 67.789 58.1407C66.4281 60.6744 64.528 63.1541 62.2771 64.9588C62.103 65.1023 62.103 65.1023 61.9254 65.2486C57.802 68.6048 52.5119 70.796 47.1576 70.9363C47.0675 70.9387 46.9773 70.9411 46.8844 70.9435C39.767 71.1054 33.4183 68.5523 28.2212 63.7428C27.4222 62.9647 26.7275 62.1007 26.0607 61.2083C26.0596 61.2802 26.0585 61.3522 26.0574 61.4264C26.051 61.7591 26.0412 62.0916 26.0314 62.4243C26.0297 62.5374 26.0281 62.6506 26.0264 62.7672C25.9972 63.6363 25.8713 64.5174 25.2697 65.187C24.5823 65.8193 23.9334 65.9512 23.0143 65.9331C22.314 65.8603 21.891 65.5908 21.3945 65.1053C20.8624 64.3148 20.7342 63.6241 20.741 62.6946C20.7404 62.5897 20.7398 62.4847 20.7391 62.3766C20.7376 62.0323 20.7386 61.6881 20.7398 61.3438C20.7395 61.103 20.7392 60.8622 20.7388 60.6214C20.7382 60.1178 20.739 59.6142 20.7406 59.1105C20.7426 58.4666 20.7415 57.8227 20.7394 57.1787C20.7381 56.6818 20.7385 56.1849 20.7394 55.688C20.7397 55.4506 20.7394 55.2132 20.7386 54.9758C20.7377 54.6435 20.739 54.3112 20.741 53.9789C20.7403 53.8818 20.7396 53.7847 20.7388 53.6847C20.7484 52.7981 20.9614 52.0086 21.6069 51.363C22.3772 50.8303 23.0152 50.7592 23.9314 50.7563C24.0359 50.7555 24.1404 50.7547 24.2481 50.7539C24.5938 50.7516 24.9394 50.7503 25.2851 50.7491C25.4035 50.7486 25.5219 50.7481 25.6438 50.7476C26.2706 50.7452 26.8974 50.7435 27.5242 50.7424C28.1697 50.7411 28.8152 50.7371 29.4607 50.7324C29.9586 50.7294 30.4566 50.7284 30.9545 50.728C31.1923 50.7274 31.4302 50.726 31.668 50.7239C34.3735 50.7006 34.3735 50.7006 35.1921 51.451C35.8328 52.1307 35.9606 52.7898 35.9426 53.7062C35.8698 54.4066 35.6003 54.8295 35.1148 55.326C34.3018 55.8732 33.5838 55.987 32.6279 55.994C32.5199 55.9961 32.412 55.9982 32.3008 56.0004C31.9593 56.0067 31.6178 56.0107 31.2763 56.0146C31.0434 56.0185 30.8106 56.0225 30.5777 56.0267C30.0097 56.0367 29.4417 56.0445 28.8736 56.0512C29.3262 56.7784 29.7805 57.4924 30.3167 58.1609C30.3712 58.2295 30.4257 58.298 30.4819 58.3686C31.2734 59.3535 32.1016 60.3021 33.093 61.0911C33.1567 61.142 33.2205 61.1928 33.2861 61.2453C34.4115 62.1369 35.5663 62.897 36.8436 63.5524C36.9153 63.5896 36.9869 63.6269 37.0608 63.6653C40.9553 65.6669 45.7001 66.2349 49.9705 65.3104C50.1073 65.2812 50.1073 65.2812 50.2469 65.2514C53.8484 64.4535 57.0401 62.7013 59.6985 60.1534C59.8511 60.012 59.8511 60.012 60.0067 59.8677C61.4481 58.4898 62.5427 56.8823 63.4491 55.1136C63.5107 54.9947 63.5107 54.9947 63.5736 54.8734C64.2317 53.5886 64.6833 52.2766 65.09 50.8942C65.6313 49.0652 65.6313 49.0652 66.5624 48.5062C67.3237 48.1636 68.2378 48.1608 69.0017 48.4988Z" fill="#1E1E1E"/>
 <rect opacity="0.4" x="20" y="21" width="19" height="19" rx="9.5" fill="white"/>
+</svg>`;
+}
+
+function iconFlash(size) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 92 92" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect opacity="0.2" width="92" height="92" rx="46" fill="white"/>
+<path d="M50 12 L22 54 H40 L36 80 L70 38 H50 L54 12 Z" fill="#1E1E1E"/>
 </svg>`;
 }
 
@@ -866,7 +945,8 @@ function render() {
       <div class="hero">
         <div class="counter-bar">
           <div class="counter-pill">${stops.length}</div>/<div class="counter-pill dark">${stops.length}</div>
-          <button class="round-btn" style="margin-left:auto" onclick="loadAll()">${iconRefresh(40)}</button>
+          <button class="round-btn" style="margin-left:auto" onclick="openFlashOverlay()" title="Entrega flash">${iconFlash(40)}</button>
+          <button class="round-btn" onclick="loadAll()">${iconRefresh(40)}</button>
         </div>
       </div>
       <div class="body-pad">
@@ -891,7 +971,8 @@ function render() {
     <div class="hero">
       <div class="counter-bar">
         <div class="counter-pill">${idx}</div>/<div class="counter-pill dark">${stops.length}</div>
-        <button class="round-btn" style="margin-left:auto" onclick="loadAll()">${iconRefresh(40)}</button>
+        <button class="round-btn" style="margin-left:auto" onclick="openFlashOverlay()" title="Entrega flash">${iconFlash(40)}</button>
+        <button class="round-btn" onclick="loadAll()">${iconRefresh(40)}</button>
       </div>
       <div class="delivery-card">${skuHTML}</div>
     </div>
@@ -1024,6 +1105,103 @@ function openWhatsAppChat(id) {
   const wa = waUrl(c);
   if (!wa) { toast('⚠️ Cliente sin teléfono'); return; }
   openExternal(wa);
+}
+
+// ═══════════════════════════════════════════════
+// Entrega flash — replica el núcleo de guardarEntregaRapida() del CRM original:
+// mismo rango de ID sintético para el pedido, mismo namespace separado ('inv_'+erKey)
+// para la deducción de inventario, para que nunca choque ni se vuelva a deducir sola.
+// A diferencia del original, acá no hay buscador de cliente existente (una entrega
+// flash es, por definición, alguien fuera de la ruta confirmada) ni edición de precio.
+// ═══════════════════════════════════════════════
+let flashT30 = 'gcp';
+function setFlashT30(t) {
+  flashT30 = t;
+  document.querySelectorAll('.flash-seg button').forEach(b => b.classList.toggle('active', b.dataset.t30 === t));
+}
+function openFlashOverlay() {
+  document.getElementById('flash-nombre').value = '';
+  document.getElementById('flash-tel').value = '';
+  document.getElementById('flash-zona').value = '';
+  document.getElementById('flash-notas').value = '';
+  document.getElementById('flash-q30').value = 1;
+  document.getElementById('flash-q15').value = 0;
+  document.getElementById('flash-add-crm').checked = false;
+  setFlashT30('gcp');
+  document.getElementById('flash-overlay').classList.add('show');
+}
+function closeFlashOverlay() { document.getElementById('flash-overlay').classList.remove('show'); }
+
+async function saveFlashDelivery() {
+  const nombre = document.getElementById('flash-nombre').value.trim();
+  if (!nombre) { toast('⚠️ El nombre es obligatorio'); return; }
+  const tel = document.getElementById('flash-tel').value.trim();
+  const zona = document.getElementById('flash-zona').value.trim();
+  const notas = document.getElementById('flash-notas').value.trim();
+  const q30 = parseInt(document.getElementById('flash-q30').value) || 0;
+  const q15 = parseInt(document.getElementById('flash-q15').value) || 0;
+  const addToClientes = document.getElementById('flash-add-crm').checked;
+  if (!q30 && !q15) { toast('⚠️ Indicá al menos una cantidad'); return; }
+
+  const p30 = 5000, p15 = 3000;
+  const fmt = [];
+  if (q30 > 0) fmt.push({ u: 30, q: q30, p: p30 });
+  if (q15 > 0) fmt.push({ u: 15, q: q15, p: p15 });
+
+  const ts = Date.now();
+  const erId = 800000000 + (ts % 99999999);
+  const erKey = 'er_' + ts;
+  // El modelo original no tiene un campo de empaque independiente: G-SP va atado al
+  // segmento b2b y G-CP al segmento domicilio (ver productBreakdown/buildQuickStops).
+  const seg = flashT30 === 'gsp' ? 'b2b' : 'domicilio';
+
+  const pedido = {
+    id: erId, week_key: wk.key, week_label: wk.label,
+    nombre, ruta: selectedDay, zona, notas, tel,
+    fmt, seg, pago: 'pendiente',
+    entregado: true, nota_cobro: '', agregado_manual: true,
+    es_entrega_rapida: true, auto_key: erKey
+  };
+
+  try {
+    await sbUpsert('pedidos', pedido);
+
+    const kv = await sbGet('kv_store', 'key=eq.inventario&select=value');
+    let inv = [];
+    try { inv = JSON.parse((kv[0] && kv[0].value) || '[]'); } catch (e) { inv = []; }
+    const gsp = flashT30 === 'gsp' ? q30 : 0;
+    const gcp = flashT30 === 'gcp' ? q30 : 0;
+    const pcp = q15;
+    inv.push({
+      id: Date.now(),
+      fecha: new Date().toISOString().split('T')[0],
+      tipo: 'entrega', desc: 'Entrega extra: ' + nombre, notas: 'Entrega flash (huevoruta)',
+      gsp: -gsp, gcp: -gcp, pcp: -pcp,
+      total: -(gsp + gcp + pcp * 0.5),
+      autoKey: 'inv_' + erKey
+    });
+    await sbUpsert('kv_store', { key: 'inventario', value: JSON.stringify(inv) });
+
+    if (addToClientes) {
+      // Rango propio (900000000+) para que un cliente nuevo creado desde acá nunca
+      // choque con un id real (los clientes reales son enteros chicos, secuenciales).
+      const newClienteId = 900000000 + (ts % 99999999);
+      await sbUpsert('clientes', {
+        id: newClienteId, nombre, tel, zona, notas,
+        seg, ruta: selectedDay, fmt,
+        estado: 'activo', freq: 'semanal'
+      });
+    }
+
+    PEDIDOS.push(pedido);
+    closeFlashOverlay();
+    toast('⚡ Entrega flash registrada');
+    render();
+    if (document.getElementById('route-overlay').classList.contains('show')) renderRouteOverlay();
+  } catch (e) {
+    console.error(e);
+    toast('⚠️ No se pudo guardar la entrega flash');
+  }
 }
 
 // ═══════════════════════════════════════════════
