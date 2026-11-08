@@ -745,7 +745,7 @@ function onConfirmClick(clienteId) {
     const stops = buildStops(selectedDay);
     const nextPending = stops.filter(s => !s.entregado && s.cliente.id !== clienteId)[0] || null;
     if (nextPending) {
-      window.open(wazeUrl(nextPending.cliente), '_blank');
+      openWaze(nextPending.cliente);
       currentStopId = nextPending.cliente.id;
       activeStopId = nextPending.cliente.id;
     } else {
@@ -814,6 +814,23 @@ function changeDay(d) {
 function addrLink(cliente, innerHtml) {
   return `<a class="addr-link" href="${wazeUrl(cliente)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${innerHtml}</a>`;
 }
+
+// En la app instalada desde "Agregar a inicio" (modo standalone), window.open() se bloquea
+// en silencio en iOS — un <a> real sí funciona ahí. Por eso cualquier apertura externa que
+// no pase por un <a> literal en el HTML (el auto-avance al confirmar, el long-press de
+// "próximos", WhatsApp) usa este mismo truco: crear el link y clickearlo de verdad, dentro
+// del mismo gesto del usuario.
+function openExternal(url) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.target = '_blank';
+  a.rel = 'noopener';
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+function openWaze(cliente) { openExternal(wazeUrl(cliente)); }
 
 // "Condominio Cerro Real, Casa 74" → nombre del lugar (gris, bold) + unidad final (más
 // grande, peso liviano), partiendo por la ÚLTIMA coma. Sin coma, todo queda como "condo".
@@ -927,7 +944,7 @@ function initNextRowGestures() {
       const stop = STOPS_BY_ID[id];
       if (!stop) return;
       if (held >= LONG_PRESS_MS) {
-        window.open(wazeUrl(stop.cliente), '_blank');
+        openWaze(stop.cliente);
       } else {
         selectStop(id);
       }
@@ -1022,13 +1039,13 @@ function sendTemplateMessage(id) {
   const text = document.getElementById('msg-textarea').value;
   const wa = waUrl(c);
   if (!wa) { toast('⚠️ Cliente sin teléfono'); return; }
-  window.open(wa + '?text=' + encodeURIComponent(text), '_blank');
+  openExternal(wa + '?text=' + encodeURIComponent(text));
 }
 function openWhatsAppChat(id) {
   const c = STOPS_BY_ID[id].cliente;
   const wa = waUrl(c);
   if (!wa) { toast('⚠️ Cliente sin teléfono'); return; }
-  window.open(wa, '_blank');
+  openExternal(wa);
 }
 
 // ═══════════════════════════════════════════════
