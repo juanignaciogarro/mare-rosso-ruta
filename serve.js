@@ -5,7 +5,10 @@ const path = require('path');
 const PORT = 8743;
 const ROOT = __dirname;
 
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json' };
+const MIME = {
+  '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json',
+  '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png'
+};
 
 http.createServer((req, res) => {
   let filePath = path.join(ROOT, req.url === '/' ? 'index.html' : req.url);
