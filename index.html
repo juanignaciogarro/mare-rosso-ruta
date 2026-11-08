@@ -210,6 +210,13 @@
     padding: 12px 14px; color: #fff; font-size: 16px; font-family: inherit;
   }
   .flash-input::placeholder { color: rgba(255,255,255,0.35); }
+  .flash-search-results { margin-top: 6px; }
+  .flash-search-row {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    padding: 10px 12px; background: rgba(255,255,255,0.1); border-radius: 10px;
+    margin-top: 6px; cursor: pointer; font-size: 14px;
+  }
+  .flash-search-row .zona { color: rgba(255,255,255,0.5); font-size: 12px; white-space: nowrap; }
   .flash-row { display: flex; gap: 10px; }
   .flash-qty { max-width: 90px; text-align: center; flex-shrink: 0; }
   .flash-seg { display: flex; flex: 1; background: rgba(255,255,255,0.1); border-radius: 12px; padding: 3px; }
@@ -273,7 +280,8 @@
     </div>
     <div class="flash-field">
       <label>Nombre</label>
-      <input id="flash-nombre" class="flash-input" placeholder="Nombre del cliente">
+      <input id="flash-nombre" class="flash-input" placeholder="Nombre del cliente" autocomplete="off" oninput="renderFlashClienteSearch(this.value)">
+      <div id="flash-cli-results" class="flash-search-results"></div>
     </div>
     <div class="flash-field">
       <label>Teléfono (opcional)</label>
@@ -1119,6 +1127,38 @@ function setFlashT30(t) {
   flashT30 = t;
   document.querySelectorAll('.flash-seg button').forEach(b => b.classList.toggle('active', b.dataset.t30 === t));
 }
+// Buscador de cliente existente (igual que renderEntregaClienteSearch/selectEntregaCliente
+// del CRM original): una entrega flash también puede ser para alguien que YA es cliente
+// (un extra puntual fuera de lo ya confirmado), no solo gente nueva. Si se elige uno de la
+// lista, se autocompleta su teléfono/zona/formato y se destilda "agregar como cliente" para
+// no crear un duplicado de alguien que ya existe en la base.
+function renderFlashClienteSearch(q) {
+  const container = document.getElementById('flash-cli-results');
+  const query = (q || '').trim().toLowerCase();
+  if (!query) { container.innerHTML = ''; return; }
+  const matches = CLIENTES.filter(c => c.estado === 'activo' && c.nombre.toLowerCase().includes(query)).slice(0, 5);
+  if (!matches.length) { container.innerHTML = ''; return; }
+  container.innerHTML = matches.map(c => {
+    const fmtLabel = (c.fmt || []).map(f => `${f.q}×${f.u}u`).join(' + ');
+    return `<div class="flash-search-row" onclick="selectFlashCliente(${c.id})"><b>${c.nombre}</b><span class="zona">${c.zona || ''} · ${fmtLabel}</span></div>`;
+  }).join('');
+}
+function selectFlashCliente(id) {
+  const c = CLIENTES.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('flash-nombre').value = c.nombre;
+  document.getElementById('flash-tel').value = c.tel || '';
+  document.getElementById('flash-zona').value = c.zona || '';
+  document.getElementById('flash-notas').value = c.notas || '';
+  const f30 = (c.fmt || []).find(f => f.u === 30);
+  const f15 = (c.fmt || []).find(f => f.u === 15);
+  document.getElementById('flash-q30').value = f30 ? f30.q : 0;
+  document.getElementById('flash-q15').value = f15 ? f15.q : 0;
+  setFlashT30(c.seg === 'b2b' ? 'gsp' : 'gcp');
+  document.getElementById('flash-add-crm').checked = false;
+  document.getElementById('flash-cli-results').innerHTML = '';
+}
+
 function openFlashOverlay() {
   document.getElementById('flash-nombre').value = '';
   document.getElementById('flash-tel').value = '';
@@ -1127,6 +1167,7 @@ function openFlashOverlay() {
   document.getElementById('flash-q30').value = 1;
   document.getElementById('flash-q15').value = 0;
   document.getElementById('flash-add-crm').checked = false;
+  document.getElementById('flash-cli-results').innerHTML = '';
   setFlashT30('gcp');
   document.getElementById('flash-overlay').classList.add('show');
 }
