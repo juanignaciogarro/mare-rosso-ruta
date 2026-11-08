@@ -933,43 +933,20 @@ function render() {
 // al cliente, igual que antes. Mantener presionado 1.2s o más abre Waze hacia ese cliente —
 // el umbral se mide en pointerup (un evento de gesto confiable), así window.open sigue
 // contando como originado por el usuario y no lo bloquea el popup blocker de Safari.
-const LONG_PRESS_MS = 1200;
+// Tocar un "próximo" que NO está seleccionado lo selecciona. Tocar el que YA está
+// seleccionado abre Waze hacia ese cliente — el long-press resultó poco confiable en iOS,
+// así que el segundo tap sobre el mismo cliente hace ese trabajo en su lugar.
 function initNextRowGestures() {
   document.querySelectorAll('.next-row').forEach(row => {
     const id = parseInt(row.dataset.clientId, 10);
-    let downAt = 0;
-    let handledByTouch = false;
-
-    function act(held) {
+    row.addEventListener('click', () => {
       const stop = STOPS_BY_ID[id];
       if (!stop) return;
-      if (held >= LONG_PRESS_MS) {
+      if (id === activeStopId) {
         openWaze(stop.cliente);
       } else {
         selectStop(id);
       }
-    }
-
-    // En iOS, el propio reconocedor de gestos de "mantener presionado" (para selección de
-    // texto / lupa) suele mandar un pointercancel a mitad del toque — incluso con la
-    // selección deshabilitada — lo que reiniciaba el cronómetro antes de soltar. touchstart/
-    // touchend no sufren eso y, al igual que click, cuentan como gesto de usuario válido
-    // para abrir Waze sin que el bloqueador de pop-ups de Safari lo descarte.
-    row.addEventListener('touchstart', () => { downAt = Date.now(); }, { passive: true });
-    row.addEventListener('touchend', () => {
-      if (!downAt) return;
-      const held = Date.now() - downAt;
-      downAt = 0;
-      handledByTouch = true;
-      act(held);
-    });
-    // Respaldo para mouse/trackpad (pruebas de escritorio): pointerdown mide, click decide.
-    row.addEventListener('pointerdown', (e) => { if (e.pointerType !== 'touch') downAt = Date.now(); });
-    row.addEventListener('click', () => {
-      if (handledByTouch) { handledByTouch = false; return; }
-      const held = downAt ? Date.now() - downAt : 0;
-      downAt = 0;
-      act(held);
     });
   });
 }
