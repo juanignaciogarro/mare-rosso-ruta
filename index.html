@@ -84,7 +84,10 @@
 
   .next-block { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
   .next-rows { flex: 1; min-width: 0; }
-  .next-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; cursor: pointer; }
+  .next-row {
+    display: flex; align-items: center; gap: 12px; padding: 12px 0; cursor: pointer;
+    -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: manipulation;
+  }
   .next-row .idx {
     width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--ink); color: var(--ink);
     font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
@@ -887,11 +890,11 @@ function render() {
       <div class="next-block">
         <div class="next-rows">
           ${others.map((s, i) => `
-            <div class="next-row ${s.cliente.id === activeStopId ? 'selected' : ''} ${i > 0 ? 'faded' : ''}" onclick="selectStop(${s.cliente.id})">
+            <div class="next-row ${s.cliente.id === activeStopId ? 'selected' : ''} ${i > 0 ? 'faded' : ''}" data-client-id="${s.cliente.id}">
               <div class="idx">${stops.findIndex(x => x.cliente.id === s.cliente.id) + 1}</div>
               <div class="info">
                 <div class="name">${s.cliente.nombre}</div>
-                <div class="addr">${addrLink(s.cliente, (s.cliente.zona || '') + (s.cliente.notas ? ' | ' + s.cliente.notas : ''))}</div>
+                <div class="addr">${(s.cliente.zona || '') + (s.cliente.notas ? ' | ' + s.cliente.notas : '')}</div>
               </div>
             </div>`).join('')}
         </div>
@@ -906,6 +909,34 @@ function render() {
 
   const active = STOPS_BY_ID[activeStopId] || current;
   setActionBar(active.cliente);
+  initNextRowGestures();
+}
+
+// Un tap corto en cualquier parte de la fila (incluida la dirección) selecciona/deselecciona
+// al cliente, igual que antes. Mantener presionado 1.2s o más abre Waze hacia ese cliente —
+// el umbral se mide en pointerup (un evento de gesto confiable), así window.open sigue
+// contando como originado por el usuario y no lo bloquea el popup blocker de Safari.
+const LONG_PRESS_MS = 1200;
+function initNextRowGestures() {
+  document.querySelectorAll('.next-row').forEach(row => {
+    const id = parseInt(row.dataset.clientId, 10);
+    let downAt = 0;
+    row.addEventListener('pointerdown', () => { downAt = Date.now(); });
+    row.addEventListener('pointerup', () => {
+      if (!downAt) return;
+      const held = Date.now() - downAt;
+      downAt = 0;
+      const stop = STOPS_BY_ID[id];
+      if (!stop) return;
+      if (held >= LONG_PRESS_MS) {
+        window.open(wazeUrl(stop.cliente), '_blank');
+      } else {
+        selectStop(id);
+      }
+    });
+    row.addEventListener('pointerleave', () => { downAt = 0; });
+    row.addEventListener('pointercancel', () => { downAt = 0; });
+  });
 }
 
 function setActionBar(c) {
