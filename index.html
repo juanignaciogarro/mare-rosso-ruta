@@ -334,14 +334,14 @@
 // after everything below has been validated against fake data.
 // ═══════════════════════════════════════════════
 const CONFIG = {
-  MODE: 'TEST', // 'TEST' | 'LIVE'
+  MODE: 'LIVE', // 'TEST' | 'LIVE'
   TEST: {
     SUPA_URL: 'https://sgpfpnqzyfazykwnxkue.supabase.co',
     SUPA_KEY: 'sb_publishable_YgSoIQNE9NFrlgYrLYkqZw_HMfpQ1Ng'
   },
   LIVE: {
     SUPA_URL: 'https://dlrfcibanmxipvhucnao.supabase.co',
-    SUPA_KEY: 'PASTE_LIVE_ANON_KEY_HERE_ONLY_WHEN_READY'
+    SUPA_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRscmZjaWJhbm14aXB2aHVjbmFvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MTI4ODAsImV4cCI6MjA5NTI4ODg4MH0.oRuRJ5_z8mSHBa_be5KQYKr7A5PywRYXHwo3SqSVRug'
   }
 };
 const SUPA_URL = CONFIG[CONFIG.MODE].SUPA_URL;
