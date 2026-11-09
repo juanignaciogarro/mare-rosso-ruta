@@ -191,12 +191,9 @@
   }
   .parada-sku b { color: var(--orange); font-weight: 800; }
   .parada-sku.cafe { background: rgba(240,156,83,0.28); color: var(--orange); }
-  .parada-row.selected { background: rgba(240,156,83,0.16); border-radius: 14px; margin: 0 -12px; padding: 12px; border-top: none !important; }
-  .parada-row.selected .idx { border-color: var(--orange); background: var(--orange); color: #1a1a1a; }
   .drag-handle { cursor: grab; color: rgba(255,255,255,0.4); font-size: 18px; touch-action: none; flex-shrink: 0; }
   .drag-handle:active { cursor: grabbing; }
   .parada-dragging { opacity: 0.4; }
-  .parada-drag-over { border-top: 2px solid var(--orange) !important; }
   .filter-switch { display: flex; background: rgba(255,255,255,0.12); border-radius: 22px; padding: 4px; margin-top: 18px; flex-shrink: 0; }
   .filter-switch button {
     flex: 1; border: none; background: none; color: rgba(255,255,255,0.7); padding: 11px;
@@ -1365,7 +1362,7 @@ function paradaRow(s, i, draggable) {
   const parts = withCafeIfNoted(s.parts, s.conf && s.conf.nota);
   if (draggable) {
     return `
-    <div class="parada-row ${c.id === activeStopId ? 'selected' : ''}" draggable="true" data-client-id="${c.id}">
+    <div class="parada-row" data-client-id="${c.id}">
       <div class="drag-handle">⠿</div>
       <div class="idx">${i + 1}</div>
       <div class="info" onclick="selectStop(${c.id})">
@@ -1392,36 +1389,44 @@ function quickParadaRow(q) {
     </div>`;
 }
 
-// Mismo patrón probado que initDragDrop() del CRM original (HTML5 drag events).
+// Pointer Events (no HTML5 drag-and-drop): el DnD nativo no dispara en touch
+// (iOS/Android), solo con mouse — mismo tipo de limitación de gestos táctiles ya
+// encontrada con el long-press. Arrastre real desde .drag-handle, con
+// setPointerCapture para que el drag siga funcionando aunque el dedo se mueva
+// sobre otras filas, y reordenando el DOM en vivo según la posición del dedo.
 function initRouteDragDrop() {
   const container = document.getElementById('route-list-body');
-  let dragSrc = null;
-  container.querySelectorAll('.parada-row[draggable]').forEach(row => {
-    row.addEventListener('dragstart', e => {
-      dragSrc = row;
-      row.classList.add('parada-dragging');
-      e.dataTransfer.effectAllowed = 'move';
-    });
-    row.addEventListener('dragend', () => {
-      row.classList.remove('parada-dragging');
-      container.querySelectorAll('.parada-row').forEach(r => r.classList.remove('parada-drag-over'));
-      const newOrder = [...container.querySelectorAll('.parada-row[draggable]')].map(r => parseInt(r.dataset.clientId));
-      persistNewOrder(newOrder);
-    });
-    row.addEventListener('dragover', e => {
+  const getRows = () => [...container.querySelectorAll('.parada-row[data-client-id]')];
+  let dragRow = null;
+
+  container.querySelectorAll('.parada-row[data-client-id] .drag-handle').forEach(handle => {
+    handle.addEventListener('pointerdown', e => {
+      dragRow = handle.closest('.parada-row');
+      dragRow.classList.add('parada-dragging');
+      handle.setPointerCapture(e.pointerId);
       e.preventDefault();
-      container.querySelectorAll('.parada-row').forEach(r => r.classList.remove('parada-drag-over'));
-      if (row !== dragSrc) row.classList.add('parada-drag-over');
     });
-    row.addEventListener('drop', e => {
+    handle.addEventListener('pointermove', e => {
+      if (!dragRow) return;
       e.preventDefault();
-      if (dragSrc && dragSrc !== row) {
-        const allRows = [...container.querySelectorAll('.parada-row[draggable]')];
-        const srcIdx = allRows.indexOf(dragSrc), tgtIdx = allRows.indexOf(row);
-        if (srcIdx > tgtIdx) row.parentNode.insertBefore(dragSrc, row);
-        else row.parentNode.insertBefore(dragSrc, row.nextSibling);
+      const y = e.clientY;
+      const rows = getRows();
+      const after = rows.find(r => r !== dragRow && y < r.getBoundingClientRect().top + r.getBoundingClientRect().height / 2);
+      if (after) {
+        if (after.previousElementSibling !== dragRow) container.insertBefore(dragRow, after);
+      } else if (rows[rows.length - 1] !== dragRow) {
+        container.appendChild(dragRow);
       }
     });
+    const endDrag = e => {
+      if (!dragRow) return;
+      dragRow.classList.remove('parada-dragging');
+      const newOrder = getRows().map(r => parseInt(r.dataset.clientId));
+      dragRow = null;
+      persistNewOrder(newOrder);
+    };
+    handle.addEventListener('pointerup', endDrag);
+    handle.addEventListener('pointercancel', endDrag);
   });
 }
 
