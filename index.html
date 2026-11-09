@@ -49,7 +49,7 @@
   .empty-wrap { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; }
   .empty-state { text-align: center; color: var(--ink2); padding: 0 20px; font-size: 18px; }
 
-  .hero { flex-shrink: 0; background: var(--orange); padding: 18px 16px 22px; border-radius: 0 0 28px 28px; }
+  .hero { flex-shrink: 0; background: var(--orange); padding: 18px 16px 55px; border-radius: 0 0 28px 28px; }
   .body-pad {
     flex: 1; min-height: 0; display: flex; flex-direction: column;
     justify-content: space-between; padding: 20px 16px;
@@ -64,9 +64,9 @@
   }
   .counter-pill.dark { background: #fff; color: var(--orange); border: none; }
 
-  .delivery-card { display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap; margin-top: 18px; }
+  .delivery-card { display: flex; gap: 120px; align-items: flex-end; flex-wrap: wrap; margin-top: 18px; }
   .sku { display: flex; align-items: flex-end; gap: 10px; }
-  .sku-qty { font-size: 30px; font-weight: 500; color: #FFEDD5; }
+  .sku-qty { font-size: 45px; font-weight: 500; color: #FFEDD5; }
   .sku svg { display: block; }
 
   .client-block { flex-shrink: 0; }
@@ -506,7 +506,7 @@ const CAFE_ICON_MARKUP = `
 // según cuántas filas de huevos dibuja) — por eso el ícono se renderiza al mismo
 // tamaño para todos los formatos, escalado proporcionalmente (nunca estirado).
 function skuIcon(prodKey) {
-  const W = 96; // 150% de los 64px originales
+  const W = 125; // 96 + 30%
   if (prodKey === 'cafe') {
     const cafeW = Math.round(W * 0.4); // la bolsa de café va al 40% del ancho del cartón
     const h = Math.round(cafeW * 270 / 130);
