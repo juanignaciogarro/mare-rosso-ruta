@@ -66,7 +66,7 @@
     border: 3px solid #fff;
   }
   .counter-pill.dark { background: #fff; color: var(--orange); border: none; }
-  .counter-label { font-weight: 400; margin-left: 2px; }
+  .counter-label { font-weight: 400; margin-left: 2px; font-variant: small-caps; }
 
   .delivery-card { display: flex; gap: 60px; align-items: flex-end; flex-wrap: wrap; margin-top: 36px; }
   .sku { display: flex; align-items: flex-end; gap: 10px; }
@@ -194,6 +194,11 @@
   }
   .parada-sku b { color: var(--orange); font-weight: 800; }
   .parada-sku.cafe { background: rgba(240,156,83,0.28); color: var(--orange); }
+  .parada-note {
+    display: flex; align-items: center; gap: 6px; margin-top: 6px;
+    color: var(--orange); font-size: 12px; font-weight: 700;
+  }
+  .parada-note .warn { flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
   .drag-handle { cursor: grab; color: rgba(255,255,255,0.4); font-size: 18px; touch-action: none; flex-shrink: 0; }
   .drag-handle:active { cursor: grabbing; }
   .parada-dragging { opacity: 0.4; }
@@ -1058,7 +1063,7 @@ function render() {
     content.innerHTML = `
       <div class="hero">
         <div class="counter-bar">
-          <div class="counter-pill">${stops.length}</div>/<div class="counter-pill dark">${stops.length}</div><span class="counter-label">Entregados</span>
+          <div class="counter-pill">${stops.length}</div>/<div class="counter-pill dark">${stops.length}</div><span class="counter-label">entregados</span>
           <button class="round-btn" style="margin-left:auto" onclick="openFlashOverlay()" title="Entrega flash">${iconFlash(40)}</button>
           <button class="round-btn" onclick="loadAll()">${iconRefresh(40)}</button>
         </div>
@@ -1084,7 +1089,7 @@ function render() {
   content.innerHTML = `
     <div class="hero">
       <div class="counter-bar">
-        <div class="counter-pill">${deliveredCount}</div>/<div class="counter-pill dark">${stops.length}</div><span class="counter-label">Entregados</span>
+        <div class="counter-pill">${deliveredCount}</div>/<div class="counter-pill dark">${stops.length}</div><span class="counter-label">entregados</span>
         <button class="round-btn" style="margin-left:auto" onclick="openFlashOverlay()" title="Entrega flash">${iconFlash(40)}</button>
         <button class="round-btn" onclick="loadAll()">${iconRefresh(40)}</button>
       </div>
@@ -1401,10 +1406,17 @@ function skuBadges(parts) {
   ).join('')}</div>`;
 }
 
+// Misma nota de confirmación que se muestra en la tarjeta principal (note-pill),
+// pero en formato compacto para una fila de la lista completa.
+function noteLine(nota) {
+  return nota ? `<div class="parada-note"><span class="warn">${iconNoteWarn(20)}</span>${nota}</div>` : '';
+}
+
 function paradaRow(s, i, draggable) {
   const c = s.cliente;
   const addr = (c.zona || '') + (c.notas ? ' — ' + c.notas : '');
-  const parts = withCafeIfNoted(s.parts, s.conf && s.conf.nota);
+  const nota = s.conf && s.conf.nota;
+  const parts = withCafeIfNoted(s.parts, nota);
   if (draggable) {
     return `
     <div class="parada-row" data-client-id="${c.id}">
@@ -1414,13 +1426,14 @@ function paradaRow(s, i, draggable) {
         <div class="name">${c.nombre}</div>
         <div class="addr">${addrLink(c, addr)}</div>
         ${skuBadges(parts)}
+        ${noteLine(nota)}
       </div>
     </div>`;
   }
   return `
     <div class="parada-row">
       <div class="idx">✓</div>
-      <div class="info"><div class="name">${c.nombre}</div><div class="addr">${addrLink(c, addr)}</div>${skuBadges(parts)}</div>
+      <div class="info"><div class="name">${c.nombre}</div><div class="addr">${addrLink(c, addr)}</div>${skuBadges(parts)}${noteLine(nota)}</div>
       <button class="round-btn dark sm" onclick="setEntregado(STOPS_BY_ID[${c.id}], false)">↩</button>
     </div>`;
 }
