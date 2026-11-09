@@ -160,11 +160,11 @@
   .msg-textarea:focus { outline: none; }
   .send-btn {
     border: none; background: none; padding: 0; cursor: pointer; margin-top: 8px;
-    display: flex; align-items: center; justify-content: center;
+    display: inline-flex; align-items: center; justify-content: center;
   }
-  .msg-alt-row { display: flex; gap: 20px; justify-content: center; margin: 20px 0 6px; }
+  .msg-alt-row { display: flex; gap: 20px; justify-content: center; align-items: center; margin: 20px 0 6px; }
   .msg-close {
-    display: flex; margin: 14px auto 0; border: none; background: none; padding: 0;
+    display: flex; border: none; background: none; padding: 0;
     align-items: center; justify-content: center; cursor: pointer;
   }
 
@@ -1195,9 +1195,9 @@ function renderMessageOverlay(stop) {
       <button class="send-btn" onclick="sendTemplateMessage(${c.id})">${iconSend(60)}</button>
     </div>
     <div class="msg-alt-row">
+      <button class="msg-close" onclick="closeMessageOverlay()">${iconCancel(48)}</button>
       <button class="round-btn" title="Dictar con Whispr Flow en WhatsApp" onclick="openWhatsAppChat(${c.id})">${iconMsgOverlay(64)}</button>
-    </div>
-    <button class="msg-close" onclick="closeMessageOverlay()">${iconCancel(48)}</button>`;
+    </div>`;
 }
 
 function toggleEditApodo(id) { editingApodo = !editingApodo; renderMessageOverlay(STOPS_BY_ID[id]); }
