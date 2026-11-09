@@ -982,7 +982,7 @@ function render() {
   const others = pending.slice(curPendingIdx + 1, curPendingIdx + 3);
 
   const skuHTML = withCafeIfNoted(current.parts, current.conf && current.conf.nota).map(p =>
-    `<div class="sku">${skuIcon(p.k)}<span class="sku-qty">${p.qty}</span></div>`
+    `<div class="sku"><span class="sku-qty">${p.qty}</span>${skuIcon(p.k)}</div>`
   ).join('');
 
   content.innerHTML = `
