@@ -66,7 +66,7 @@
     border: 3px solid #fff;
   }
   .counter-pill.dark { background: #fff; color: var(--orange); border: none; }
-  .counter-label { font-weight: 400; margin-left: 2px; font-variant: small-caps; }
+  .counter-label { font-weight: 400; margin-left: 2px; text-transform: uppercase; font-size: 12px; letter-spacing: 0.3px; }
 
   .delivery-card { display: flex; gap: 60px; align-items: flex-end; flex-wrap: wrap; margin-top: 36px; }
   .sku { display: flex; align-items: flex-end; gap: 10px; }
@@ -462,8 +462,10 @@ const PROD_LABEL = { gsp: 'G-SP', gcp: 'G-CP', pcp: 'P-CP', cafe: 'Café' };
 
 // Si la nota de confirmación (o del pedido) menciona una bolsa de café, se agrega el
 // ícono de café a la lista de SKUs a entregar — no hay un campo estructurado para esto.
+// "molido"/"grano"/"340g" también delatan una bolsa de café aunque la nota no diga "café".
+const CAFE_NOTE_RE = /caf[eé]|molido|grano|340\s*g\b/i;
 function withCafeIfNoted(parts, noteText) {
-  if (noteText && /caf[eé]/i.test(noteText)) return [...parts, { k: 'cafe', qty: 1 }];
+  if (noteText && CAFE_NOTE_RE.test(noteText)) return [...parts, { k: 'cafe', qty: 1 }];
   return parts;
 }
 
