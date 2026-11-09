@@ -217,14 +217,21 @@
     margin-top: 6px; cursor: pointer; font-size: 14px;
   }
   .flash-search-row .zona { color: rgba(255,255,255,0.5); font-size: 12px; white-space: nowrap; }
-  .flash-row { display: flex; gap: 10px; }
-  .flash-qty { max-width: 90px; text-align: center; flex-shrink: 0; }
-  .flash-seg { display: flex; flex: 1; background: rgba(255,255,255,0.1); border-radius: 12px; padding: 3px; }
-  .flash-seg button {
-    flex: 1; border: none; background: none; color: rgba(255,255,255,0.7); padding: 10px 6px;
-    border-radius: 9px; font-weight: 700; cursor: pointer; font-family: inherit; font-size: 13px;
+  .flash-row { display: flex; gap: 14px; align-items: center; }
+  .flash-qty { max-width: 64px; text-align: center; flex-shrink: 0; padding: 12px 8px; }
+  .flash-toggle { display: flex; align-items: center; gap: 10px; flex: 1; cursor: pointer; }
+  .flash-toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .flash-toggle-slider {
+    display: inline-block; position: relative; width: 48px; height: 28px; border-radius: 14px; flex-shrink: 0;
+    background: rgba(255,255,255,0.25); transition: background 0.15s;
   }
-  .flash-seg button.active { background: var(--orange); color: #1a1a1a; }
+  .flash-toggle-slider::before {
+    content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px;
+    border-radius: 50%; background: #fff; transition: transform 0.15s;
+  }
+  .flash-toggle input:checked + .flash-toggle-slider { background: var(--orange); }
+  .flash-toggle input:checked + .flash-toggle-slider::before { transform: translateX(20px); }
+  .flash-toggle-label { font-weight: 700; font-size: 15px; }
   .flash-checkbox-row {
     display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600;
     margin: 4px 0 20px; cursor: pointer;
@@ -298,16 +305,19 @@
     <div class="flash-field">
       <label>Cartón grande</label>
       <div class="flash-row">
-        <div class="flash-seg">
-          <button type="button" data-t30="gsp" onclick="setFlashT30('gsp')">Sin plástico</button>
-          <button type="button" data-t30="gcp" class="active" onclick="setFlashT30('gcp')">Con plástico</button>
-        </div>
         <input id="flash-q30" class="flash-input flash-qty" type="number" inputmode="numeric" min="0" value="1">
+        <label class="flash-toggle">
+          <input id="flash-t30-toggle" type="checkbox" checked onchange="onFlashT30Toggle(this.checked)">
+          <span class="flash-toggle-slider"></span>
+          <span id="flash-t30-label" class="flash-toggle-label">Con plástico</span>
+        </label>
       </div>
     </div>
     <div class="flash-field">
       <label>Cartón pequeño (P-CP)</label>
-      <input id="flash-q15" class="flash-input flash-qty" type="number" inputmode="numeric" min="0" value="0">
+      <div class="flash-row">
+        <input id="flash-q15" class="flash-input flash-qty" type="number" inputmode="numeric" min="0" value="0">
+      </div>
     </div>
     <label class="flash-checkbox-row">
       <input id="flash-add-crm" type="checkbox">
@@ -1123,10 +1133,14 @@ function openWhatsAppChat(id) {
 // flash es, por definición, alguien fuera de la ruta confirmada) ni edición de precio.
 // ═══════════════════════════════════════════════
 let flashT30 = 'gcp';
+// true (encendido) = con plástico, false = sin plástico — son los únicos 2 buckets de
+// inventario reales para el cartón grande (G-CP/G-SP), así que no hace falta más que esto.
 function setFlashT30(t) {
   flashT30 = t;
-  document.querySelectorAll('.flash-seg button').forEach(b => b.classList.toggle('active', b.dataset.t30 === t));
+  document.getElementById('flash-t30-toggle').checked = (t === 'gcp');
+  document.getElementById('flash-t30-label').textContent = t === 'gcp' ? 'Con plástico' : 'Sin plástico';
 }
+function onFlashT30Toggle(isOn) { setFlashT30(isOn ? 'gcp' : 'gsp'); }
 // Buscador de cliente existente (igual que renderEntregaClienteSearch/selectEntregaCliente
 // del CRM original): una entrega flash también puede ser para alguien que YA es cliente
 // (un extra puntual fuera de lo ya confirmado), no solo gente nueva. Si se elige uno de la
