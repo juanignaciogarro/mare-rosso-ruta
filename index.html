@@ -66,6 +66,7 @@
     border: 3px solid #fff;
   }
   .counter-pill.dark { background: #fff; color: var(--orange); border: none; }
+  .counter-label { font-weight: 400; margin-left: 2px; }
 
   .delivery-card { display: flex; gap: 60px; align-items: flex-end; flex-wrap: wrap; margin-top: 36px; }
   .sku { display: flex; align-items: flex-end; gap: 10px; }
@@ -1057,7 +1058,7 @@ function render() {
     content.innerHTML = `
       <div class="hero">
         <div class="counter-bar">
-          <div class="counter-pill">${stops.length}</div>/<div class="counter-pill dark">${stops.length}</div>
+          <div class="counter-pill">${stops.length}</div>/<div class="counter-pill dark">${stops.length}</div><span class="counter-label">Entregados</span>
           <button class="round-btn" style="margin-left:auto" onclick="openFlashOverlay()" title="Entrega flash">${iconFlash(40)}</button>
           <button class="round-btn" onclick="loadAll()">${iconRefresh(40)}</button>
         </div>
@@ -1072,7 +1073,7 @@ function render() {
 
   const current = STOPS_BY_ID[currentStopId];
   const c = current.cliente;
-  const idx = stops.findIndex(s => s.cliente.id === c.id) + 1;
+  const deliveredCount = stops.filter(s => s.entregado).length;
   const curPendingIdx = pending.findIndex(s => s.cliente.id === c.id);
   const others = pending.slice(curPendingIdx + 1, curPendingIdx + 3);
 
@@ -1083,7 +1084,7 @@ function render() {
   content.innerHTML = `
     <div class="hero">
       <div class="counter-bar">
-        <div class="counter-pill">${idx}</div>/<div class="counter-pill dark">${stops.length}</div>
+        <div class="counter-pill">${deliveredCount}</div>/<div class="counter-pill dark">${stops.length}</div><span class="counter-label">Entregados</span>
         <button class="round-btn" style="margin-left:auto" onclick="openFlashOverlay()" title="Entrega flash">${iconFlash(40)}</button>
         <button class="round-btn" onclick="loadAll()">${iconRefresh(40)}</button>
       </div>
