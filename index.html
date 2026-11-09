@@ -159,13 +159,12 @@
   }
   .msg-textarea:focus { outline: none; }
   .send-btn {
-    width: 54px; height: 54px; border-radius: 50%; background: var(--green); border: none;
-    color: #fff; font-size: 22px; cursor: pointer; margin-top: 8px;
+    border: none; background: none; padding: 0; cursor: pointer; margin-top: 8px;
+    display: flex; align-items: center; justify-content: center;
   }
   .msg-alt-row { display: flex; gap: 20px; justify-content: center; margin: 20px 0 6px; }
   .msg-close {
-    display: flex; margin: 14px auto 0; width: 48px; height: 48px; border-radius: 50%;
-    background: rgba(255,255,255,0.15); border: none; color: var(--red); font-size: 20px;
+    display: flex; margin: 14px auto 0; border: none; background: none; padding: 0;
     align-items: center; justify-content: center; cursor: pointer;
   }
 
@@ -629,6 +628,41 @@ function iconCall(size) {
 <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_9_4568" result="shape"/>
 </filter>
 </defs>
+</svg>`;
+}
+
+function iconMsgOverlay(size) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 179 179" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<rect width="179" height="179" rx="89.5" fill="white" fill-opacity="0.8"/>
+<rect opacity="0.6" x="8" y="8" width="163" height="163" rx="81.5" fill="white"/>
+<use xlink:href="#stroke0_24_6679" fill="#242021"/>
+<mask id="stroke1_24_6679" maskUnits="userSpaceOnUse" x="60" y="66" width="58" height="60" fill="black">
+<rect fill="white" x="60" y="66" width="58" height="60"/>
+<use xlink:href="#stroke0_24_6679"/>
+</mask>
+<path d="M106.333 109.051H105.833V112.333H106.333H106.833V109.051H106.333ZM77.5917 121.077L78.2648 121.817V121.817L77.5917 121.077ZM92.0769 112.333V111.333H91.69L91.4039 111.594L92.0769 112.333ZM79.8007 123.505L80.4666 124.251L80.4737 124.244L79.8007 123.505ZM79.7262 123.571L80.3854 124.323L80.392 124.317L79.7262 123.571ZM71.5641 112.333H72.5641V111.333H71.5641V112.333ZM90.1614 109.639L89.4884 108.899V108.899L90.1614 109.639ZM113.718 101.667H114.718V77.6667H113.718H112.718V101.667H113.718ZM113.718 77.6667H114.718C114.718 73.036 110.964 69.2821 106.333 69.2821V70.2821V71.2821C109.859 71.2821 112.718 74.1405 112.718 77.6667H113.718ZM106.333 70.2821V69.2821H71.6667V70.2821V71.2821H106.333V70.2821ZM71.6667 70.2821V69.2821C67.036 69.2821 63.2821 73.036 63.2821 77.6667H64.2821H65.2821C65.2821 74.1405 68.1405 71.2821 71.6667 71.2821V70.2821ZM64.2821 77.6667H63.2821V101.769H64.2821H65.2821V77.6667H64.2821ZM64.2821 101.769H63.2821C63.2821 106.343 66.9901 110.051 71.5641 110.051V109.051V108.051C68.0946 108.051 65.2821 105.239 65.2821 101.769H64.2821ZM71.5641 109.051V110.051H72.5897V109.051V108.051H71.5641V109.051ZM74.8462 111.308H73.8462V119.864H74.8462H75.8462V111.308H74.8462ZM74.8462 119.864H73.8462C73.8462 122.157 76.5686 123.36 78.2648 121.817L77.5917 121.077L76.9187 120.338C76.507 120.712 75.8462 120.42 75.8462 119.864H74.8462ZM91.6801 109.051V110.051H106.333V109.051V108.051H91.6801V109.051ZM106.333 112.333V111.333H92.0769V112.333V113.333H106.333V112.333ZM92.0769 112.333L91.4039 111.594L79.1276 122.765L79.8007 123.505L80.4737 124.244L92.75 113.073L92.0769 112.333ZM79.8007 123.505L79.1348 122.759L79.0603 122.825L79.7262 123.571L80.392 124.317L80.4665 124.251L79.8007 123.505ZM79.7262 123.571L79.067 122.819C76.5448 125.03 72.5641 123.243 72.5641 119.864H71.5641H70.5641C70.5641 124.968 76.5747 127.664 80.3853 124.323L79.7262 123.571ZM71.5641 119.864H72.5641V112.333H71.5641H70.5641V119.864H71.5641ZM71.5641 112.333V111.333C66.282 111.333 62 107.051 62 101.769H61H60C60 108.156 65.1774 113.333 71.5641 113.333V112.333ZM61 101.769H62V77.6667H61H60V101.769H61ZM61 77.6667H62C62 72.3279 66.3279 68 71.6667 68V67V66C65.2233 66 60 71.2233 60 77.6667H61ZM71.6667 67V68H106.333V67V66H71.6667V67ZM106.333 67V68C111.672 68 116 72.3279 116 77.6667H117H118C118 71.2233 112.777 66 106.333 66V67ZM117 77.6667H116V101.667H117H118V77.6667H117ZM117 101.667H116C116 107.005 111.672 111.333 106.333 111.333V112.333V113.333C112.777 113.333 118 108.11 118 101.667H117ZM106.333 109.051V110.051C110.964 110.051 114.718 106.297 114.718 101.667H113.718H112.718C112.718 105.193 109.859 108.051 106.333 108.051V109.051ZM77.5917 121.077L78.2648 121.817L90.8345 110.378L90.1614 109.639L89.4884 108.899L76.9187 120.338L77.5917 121.077ZM91.6801 109.051V108.051C90.8694 108.051 90.0879 108.354 89.4884 108.899L90.1614 109.639L90.8345 110.378C91.0658 110.168 91.3673 110.051 91.6801 110.051V109.051ZM72.5897 109.051V110.051C73.2836 110.051 73.8462 110.614 73.8462 111.308H74.8462H75.8462C75.8462 109.509 74.3882 108.051 72.5897 108.051V109.051Z" fill="black" mask="url(#stroke1_24_6679)"/>
+<path d="M104.693 82.7949C105.599 82.7949 106.334 83.5296 106.334 84.4359C106.334 85.3422 105.599 86.0769 104.693 86.0769H73.1029C72.1966 86.0769 71.4619 85.3422 71.4619 84.4359C71.4619 83.5296 72.1966 82.7949 73.1029 82.7949H104.693Z" fill="#242021" stroke-linecap="round" stroke="black"/>
+<path d="M96.0773 93.2564C96.9836 93.2564 97.7183 93.9911 97.7183 94.8974C97.7183 95.8037 96.9836 96.5385 96.0773 96.5385H73.1029C72.1966 96.5385 71.4619 95.8037 71.4619 94.8974C71.4619 93.9911 72.1966 93.2564 73.1029 93.2564H96.0773Z" fill="#242021" stroke-linecap="round" stroke="black"/>
+<rect opacity="0.8" x="51.6952" y="53.1305" width="27.2609" height="27.2609" rx="13.6304" fill="white"/>
+<defs>
+<path id="stroke0_24_6679" d="M113.718 101.667V77.6667C113.718 73.5883 110.412 70.2821 106.333 70.2821H71.6667C67.5883 70.2821 64.2821 73.5883 64.2821 77.6667V101.769C64.2821 105.791 67.5423 109.051 71.5641 109.051H72.5897C73.8359 109.051 74.8462 110.062 74.8462 111.308V119.864C74.8462 121.289 76.5378 122.036 77.5917 121.077L90.1614 109.639C90.5769 109.261 91.1184 109.051 91.6801 109.051H106.333V112.333H92.0769L79.8007 123.505L79.7262 123.571C76.5598 126.347 71.5641 124.105 71.5641 119.864V112.333C65.7297 112.333 61 107.604 61 101.769V77.6667C61 71.7756 65.7756 67 71.6667 67H106.333C112.224 67 117 71.7756 117 77.6667V101.667C117 107.558 112.224 112.333 106.333 112.333V109.051C110.412 109.051 113.718 105.745 113.718 101.667Z"/>
+</defs>
+</svg>`;
+}
+
+function iconSend(size) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 132 132" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="66" cy="66" r="66" fill="#1DAA61"/>
+<path d="M35.6396 59.8575L61.7291 66.498L35.6396 73.1385V88.0983C35.6396 90.4562 38.041 92.0533 40.2155 91.1417L91.8733 69.4855C94.5527 68.3622 94.5779 64.5748 91.9136 63.416L40.2559 40.9478C38.0763 39.9998 35.6396 41.5972 35.6396 43.9739V59.8575Z" fill="white"/>
+<rect opacity="0.6" x="28.7024" y="29.7001" width="27.3972" height="27.3972" rx="13.6986" fill="white"/>
+</svg>`;
+}
+
+function iconCancel(size) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 132 132" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect opacity="0.6" width="132" height="132" rx="66" fill="white"/>
+<path d="M41.8462 80.5869L80.586 41.8471L90.3804 51.6415L51.6406 90.3813L41.8462 80.5869ZM41.8462 51.6415L51.6406 41.8471L90.3804 80.5869L80.586 90.3813L41.8462 51.6415Z" fill="#EF4D5A"/>
+<rect opacity="0.3" x="28.6952" y="30.1305" width="27.2609" height="27.2609" rx="13.6304" fill="white"/>
 </svg>`;
 }
 
@@ -1158,13 +1192,12 @@ function renderMessageOverlay(stop) {
     </div>` : ''}
     <div class="msg-bubble">
       <textarea id="msg-textarea" class="msg-textarea">${defaultMessage(c)}</textarea><br>
-      <button class="send-btn" onclick="sendTemplateMessage(${c.id})">➤</button>
+      <button class="send-btn" onclick="sendTemplateMessage(${c.id})">${iconSend(60)}</button>
     </div>
     <div class="msg-alt-row">
-      <button class="round-btn dark" title="Dictar con Whispr Flow en WhatsApp" onclick="openWhatsAppChat(${c.id})">🗨️</button>
-      <button class="round-btn dark" title="Nota de voz en WhatsApp" onclick="openWhatsAppChat(${c.id})">🎤</button>
+      <button class="round-btn" title="Dictar con Whispr Flow en WhatsApp" onclick="openWhatsAppChat(${c.id})">${iconMsgOverlay(64)}</button>
     </div>
-    <button class="msg-close" onclick="closeMessageOverlay()">✕</button>`;
+    <button class="msg-close" onclick="closeMessageOverlay()">${iconCancel(48)}</button>`;
 }
 
 function toggleEditApodo(id) { editingApodo = !editingApodo; renderMessageOverlay(STOPS_BY_ID[id]); }
