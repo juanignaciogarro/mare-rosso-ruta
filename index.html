@@ -70,8 +70,11 @@
   .sku svg { display: block; }
 
   .client-block { flex-shrink: 0; }
+  .client-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
   .client-name { font-size: clamp(22px, 5.5vw, 28px); font-weight: 800; line-height: 1.2; }
   .client-row { display: flex; justify-content: flex-start; align-items: baseline; gap: 18px; margin-top: 8px; flex-wrap: wrap; }
+  .waze-pin-btn { border: none; background: none; padding: 0; cursor: pointer; flex-shrink: 0; }
+  .waze-pin-btn:disabled { opacity: 0.5; }
   .client-zona { color: var(--orange-dark); font-weight: 800; font-size: 15px; white-space: nowrap; }
   .client-addr { text-align: left; font-size: 15px; }
   .addr-link { color: inherit; text-decoration: none; }
@@ -537,6 +540,31 @@ function iconFlash(size) {
 </svg>`;
 }
 
+function iconWazePin(size) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 92 92" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g filter="url(#filter0_d_50_1294)">
+<path d="M65.146 72H26.854C20.86 72 16 67.14 16 61.146V22.854C16 16.86 20.86 12 26.854 12H65.146C71.14 12 76 16.86 76 22.854V61.146C76 67.14 71.14 72 65.146 72Z" fill="white"/>
+</g>
+<path d="M47.8173 27.8867C43.9208 27.8867 40.2879 29.6384 37.8391 32.744C36.1321 34.9336 35.2116 37.646 35.2116 40.403V42.7222C35.2116 43.7276 34.8184 44.6928 34.1615 45.3899C33.6387 45.9172 32.9818 46.3104 32.2803 46.4847C32.5439 47.1416 33.1561 48.147 34.2509 49.2418C35.1714 50.2025 36.2662 50.9934 37.4459 51.5609V51.5162C38.1877 50.3768 39.4165 49.7199 40.7705 49.7199C41.0341 49.7199 41.2531 49.7646 41.5167 49.8093C43.0941 50.1176 44.3185 51.342 44.6223 52.8747H47.862C51.2313 52.8747 54.4262 51.476 56.7454 49.1971C60.3336 45.6089 61.4284 40.2288 59.4623 35.586C57.4916 30.903 52.9382 27.8867 47.8173 27.8867Z" fill="white"/>
+<path d="M47.8172 26.3093C43.4828 26.3093 39.4164 28.2353 36.6549 31.6939C34.6843 34.1873 33.6342 37.2527 33.6342 40.4477V42.7222C33.6342 43.9019 32.803 44.9967 31.1854 45.086C30.7922 45.086 30.4839 45.3944 30.4437 45.7876C30.399 46.8377 31.5384 48.8083 33.1114 50.3812C34.2061 51.476 35.4752 52.3518 36.8292 53.0489C36.3912 55.4575 38.2725 57.6426 40.7257 57.6426H40.7704C42.6516 57.6426 44.229 56.3288 44.6223 54.5369H47.9066C48.2552 56.3333 49.8325 57.6426 51.7585 57.6426C52.1964 57.6426 52.679 57.5532 53.1169 57.4236C54.2117 57.0751 55.0428 56.2439 55.4361 55.1491C55.7846 54.1437 55.7444 53.1383 55.4361 52.3027C56.3119 51.7352 57.0984 51.123 57.8446 50.3768C60.5123 47.7493 62.0003 44.1611 62.0003 40.4432C62.0003 36.6808 60.5123 33.1774 57.8446 30.5097C55.1724 27.7527 51.5842 26.3093 47.8172 26.3093ZM47.8172 27.8867C52.8935 27.8867 57.4916 30.9521 59.4577 35.6351C61.4284 40.3181 60.3336 45.7027 56.7453 49.2462C54.4262 51.5654 51.2312 52.9238 47.8619 52.9238H44.6223C44.3139 51.3464 43.0896 50.1667 41.5166 49.8584C41.253 49.8137 41.034 49.769 40.7704 49.769C39.4567 49.769 38.1876 50.4259 37.4458 51.5654V51.6101C36.2661 50.9979 35.2116 50.207 34.2508 49.2909C33.156 48.1961 32.5439 47.146 32.2802 46.5338C33.0265 46.3596 33.6386 45.9663 34.1615 45.439C34.8183 44.6928 35.2116 43.7768 35.2116 42.7713V40.4522C35.2116 37.6951 36.1321 34.9827 37.839 32.7931C40.2923 29.5937 43.9252 27.8867 47.8172 27.8867Z" fill="#000001"/>
+<path d="M54.1223 35.6753C53.2465 35.6753 52.5449 36.3768 52.5449 37.2527C52.5449 38.1285 53.2465 38.8301 54.1223 38.8301C54.9981 38.8301 55.6997 38.1285 55.6997 37.2527C55.6952 36.3768 54.9981 35.6753 54.1223 35.6753Z" fill="#000001"/>
+<path d="M44.6672 35.6753C43.7914 35.6753 43.0898 36.3768 43.0898 37.2527C43.0898 38.1285 43.7914 38.8301 44.6672 38.8301C45.5431 38.8301 46.2446 38.1285 46.2446 37.2527C46.2446 36.3768 45.5431 35.6753 44.6672 35.6753Z" fill="#000001"/>
+<path d="M44.4031 41.9314C43.8356 41.9314 43.4424 42.4989 43.7016 43.0262C44.7517 45.2158 46.9412 46.6144 49.39 46.6144C51.8387 46.6144 54.0283 45.2158 55.0784 43.0262C55.2974 42.5034 54.9488 41.9314 54.3769 41.9314C54.0685 41.9314 53.8094 42.1057 53.6753 42.3693C52.8888 43.9869 51.2265 45.037 49.4302 45.037C47.5936 45.037 45.9314 43.9869 45.1851 42.3693C45.0198 42.1101 44.7561 41.9314 44.4031 41.9314Z" fill="#000001"/>
+<defs>
+<filter id="filter0_d_50_1294" x="0" y="0" width="92" height="92" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="4"/>
+<feGaussianBlur stdDeviation="8"/>
+<feComposite in2="hardAlpha" operator="out"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0.239615 0 0 0 0 0.353433 0 0 0 0 0.599038 0 0 0 0.18 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_50_1294"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_50_1294" result="shape"/>
+</filter>
+</defs>
+</svg>`;
+}
+
 function iconChevron(size) {
   return `<svg width="${size}" height="${size}" viewBox="0 0 124 124" fill="none" xmlns="http://www.w3.org/2000/svg">
 <g filter="url(#filter0_d_11_5744)">
@@ -930,6 +958,34 @@ function openExternal(url) {
 }
 function openWaze(cliente) { openExternal(wazeUrl(cliente)); }
 
+// Guarda la ubicación GPS actual del dispositivo como el pin de Waze de ESE cliente
+// (solo el cliente de la entrega actual, no toda la ruta) — mismo campo lat/lng que usa
+// el CRM original (ver captureGPS() ahí), pero en un solo tap: sin abrir un formulario,
+// se persiste directo a la fila de ese cliente en Supabase.
+function setWazePinFromGPS(clienteId) {
+  if (!navigator.geolocation) { toast('❌ GPS no disponible'); return; }
+  toast('📡 Obteniendo ubicación...');
+  navigator.geolocation.getCurrentPosition(
+    async pos => {
+      const lat = parseFloat(pos.coords.latitude.toFixed(6));
+      const lng = parseFloat(pos.coords.longitude.toFixed(6));
+      const c = CLIENTES.find(x => x.id === clienteId);
+      if (!c) return;
+      try {
+        await sbUpsert('clientes', { ...c, lat, lng });
+        Object.assign(c, { lat, lng });
+        toast('✅ Ubicación de Waze guardada');
+        render();
+      } catch (e) {
+        console.error(e);
+        toast('⚠️ No se pudo guardar la ubicación');
+      }
+    },
+    err => toast('❌ ' + (err.message || 'Error de GPS')),
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+
 // "Condominio Cerro Real, Casa 74" → nombre del lugar (gris, bold) + unidad final (más
 // grande, peso liviano), partiendo por la ÚLTIMA coma. Sin coma, todo queda como "condo".
 function addrHTML(notas) {
@@ -996,10 +1052,15 @@ function render() {
     </div>
     <div class="body-pad">
       <div class="client-block">
-        <div class="client-name">${c.nombre}</div>
-        <div class="client-row">
-          <div class="client-zona">${c.zona || ''}</div>
-          <div class="client-addr">${addrLink(c, addrHTML(c.notas))}</div>
+        <div class="client-head">
+          <div>
+            <div class="client-name">${c.nombre}</div>
+            <div class="client-row">
+              <div class="client-zona">${c.zona || ''}</div>
+              <div class="client-addr">${addrLink(c, addrHTML(c.notas))}</div>
+            </div>
+          </div>
+          <button class="waze-pin-btn" title="Guardar ubicación GPS actual como pin de Waze" onclick="setWazePinFromGPS(${c.id})">${iconWazePin(64)}</button>
         </div>
         ${current.conf && current.conf.nota ? `<div class="note-pill"><span class="warn">${iconNoteWarn(48)}</span>${current.conf.nota}</div>` : ''}
       </div>
