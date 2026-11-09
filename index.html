@@ -1192,10 +1192,10 @@ function renderMessageOverlay(stop) {
     </div>` : ''}
     <div class="msg-bubble">
       <textarea id="msg-textarea" class="msg-textarea">${defaultMessage(c)}</textarea><br>
-      <button class="send-btn" onclick="sendTemplateMessage(${c.id})">${iconSend(60)}</button>
+      <button class="send-btn" onclick="sendTemplateMessage(${c.id})">${iconSend(52)}</button>
     </div>
     <div class="msg-alt-row">
-      <button class="msg-close" onclick="closeMessageOverlay()">${iconCancel(48)}</button>
+      <button class="msg-close" onclick="closeMessageOverlay()">${iconCancel(64)}</button>
       <button class="round-btn" title="Dictar con Whispr Flow en WhatsApp" onclick="openWhatsAppChat(${c.id})">${iconMsgOverlay(64)}</button>
     </div>`;
 }
@@ -1375,7 +1375,10 @@ function renderRouteOverlay() {
   const quick = buildQuickStops(selectedDay);
   const list = routeFilter === 'pendientes' ? stops.filter(s => !s.entregado) : stops.filter(s => s.entregado);
 
-  let html = list.map((s, i) => paradaRow(s, i, routeFilter === 'pendientes')).join('');
+  // El número mostrado es la posición absoluta dentro del día completo (igual que el
+  // contador de la tarjeta principal), no la posición dentro de esta sublista filtrada —
+  // si no, al entregarle al #1 la lista de pendientes "reiniciaba" y volvía a empezar en 1.
+  let html = list.map(s => paradaRow(s, stops.findIndex(x => x.cliente.id === s.cliente.id), routeFilter === 'pendientes')).join('');
   if (routeFilter === 'entregados' && quick.length) html += quick.map(quickParadaRow).join('');
   if (!html) html = `<div class="empty-state" style="color:rgba(255,255,255,0.5)">${routeFilter === 'pendientes' ? 'No quedan paradas pendientes.' : 'Nada entregado todavía.'}</div>`;
 
