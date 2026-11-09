@@ -895,10 +895,15 @@ function toast(msg) {
 // ═══════════════════════════════════════════════
 function ensureSelection(stops) {
   const pending = stops.filter(s => !s.entregado);
-  const curValid = pending.some(s => s.cliente.id === currentStopId);
-  if (!curValid) {
-    currentStopId = pending.length ? pending[0].cliente.id : null;
-    activeStopId = currentStopId; // a new "current" resets any manual pick back to default
+  // "Current" is always whoever is first in the pending order — not just "still pending
+  // somewhere". Without this, dragging a different stop to the top of the route overlay
+  // left the old first client stuck as "current" until something else (changing day)
+  // happened to invalidate it outright.
+  const newCurrent = pending.length ? pending[0].cliente.id : null;
+  if (newCurrent !== currentStopId) {
+    const wasDefaultActive = activeStopId === currentStopId;
+    currentStopId = newCurrent;
+    if (wasDefaultActive) activeStopId = newCurrent; // a new "current" resets any manual pick back to default
   }
   const activeValid = pending.some(s => s.cliente.id === activeStopId);
   if (!activeValid) activeStopId = currentStopId;
