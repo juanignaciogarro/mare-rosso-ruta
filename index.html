@@ -66,7 +66,7 @@
     border: 3px solid #fff;
   }
   .counter-pill.dark { background: #fff; color: var(--orange); border: none; }
-  .counter-label { font-weight: 400; margin-left: 2px; text-transform: uppercase; font-size: 12px; letter-spacing: 0.3px; }
+  .counter-label { font-weight: 400; margin-left: 2px; font-size: 15px; }
 
   .delivery-card { display: flex; gap: 60px; align-items: flex-end; flex-wrap: wrap; margin-top: 36px; }
   .sku { display: flex; align-items: flex-end; gap: 10px; }
@@ -108,6 +108,12 @@
   .next-row.faded:not(.selected) .addr { color: #C7C7C7; }
   .next-row.selected { background: var(--cream); border-radius: 14px; margin: 0 -12px; padding: 12px; }
   .next-row.selected .idx { border-color: var(--orange-dark); background: var(--orange); color: #1a1a1a; }
+  .next-row-note {
+    display: flex; align-items: center; gap: 5px; margin-top: 3px;
+    color: var(--orange-dark); font-size: 12px; font-weight: 700;
+  }
+  .next-row-note .warn { flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .next-row.faded:not(.selected) .next-row-note { color: #E2BE9D; }
   /* Botones con assets reales de Figma: el propio SVG trae su círculo/sombra,
      así que el <button> queda sin fondo/borde propio — solo centra el ícono. */
   .chevron-btn, .round-btn, .egg-btn {
@@ -1120,6 +1126,7 @@ function render() {
               <div class="info">
                 <div class="name">${s.cliente.nombre}</div>
                 <div class="addr">${(s.cliente.zona || '') + (s.cliente.notas ? ' | ' + s.cliente.notas : '')}</div>
+                ${s.conf && s.conf.nota ? `<div class="next-row-note"><span class="warn">${iconNoteWarn(16)}</span>${s.conf.nota}</div>` : ''}
               </div>
             </div>`).join('')}
         </div>
