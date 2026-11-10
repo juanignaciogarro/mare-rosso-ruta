@@ -482,7 +482,7 @@ function deductionFromParts(parts) {
   parts.forEach(p => { if (p.k === 'gsp') gsp += p.qty; else if (p.k === 'gcp') gcp += p.qty; else pcp += p.qty; });
   return { gsp, gcp, pcp };
 }
-const PROD_LABEL = { gsp: 'G-SP', gcp: 'G-CP', pcp: 'P-CP', cafe: 'Café' };
+const PROD_LABEL = { gsp: 'G-SP', gcp: 'G-CP', pcp: 'P', psp: 'P-SP', cafe: 'Café' };
 
 // Si la nota de confirmación (o del pedido) menciona una bolsa de café, se agrega el
 // ícono de café a la lista de SKUs a entregar — no hay un campo estructurado para esto.
