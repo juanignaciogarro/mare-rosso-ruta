@@ -154,7 +154,6 @@
   .overlay-card, .route-list { scrollbar-width: none; -ms-overflow-style: none; }
   .overlay-card::-webkit-scrollbar, .route-list::-webkit-scrollbar { display: none; width: 0; height: 0; }
   .overlay-card {
-    position: relative;
     background: var(--ink); color: #fff; width: 100%; max-width: 520px; border-radius: 32px 32px 0 0;
     padding: 24px 20px; max-height: 85vh; overflow-y: auto;
   }
@@ -187,6 +186,7 @@
   #route-overlay .overlay-card { display: flex; flex-direction: column; overflow: hidden; }
   .route-header { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
   .route-pills { display: flex; gap: 6px; flex: 1; flex-wrap: wrap; }
+  .route-header-actions { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
   .route-list { margin-top: 16px; min-height: 0; flex: 1; overflow-y: auto; }
   .parada-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
   .parada-row + .parada-row { border-top: 1px solid rgba(255,255,255,0.12); }
@@ -215,18 +215,13 @@
   .drag-handle { cursor: grab; color: rgba(255,255,255,0.4); font-size: 18px; touch-action: none; flex-shrink: 0; }
   .drag-handle:active { cursor: grabbing; }
   .parada-dragging { opacity: 0.4; }
-  .filter-switch { display: flex; background: rgba(255,255,255,0.12); border-radius: 22px; padding: 4px; margin-top: 18px; flex-shrink: 0; }
+  .route-bottom-bar { display: flex; align-items: center; gap: 12px; margin-top: 18px; flex-shrink: 0; }
+  .filter-switch { display: flex; background: rgba(255,255,255,0.12); border-radius: 22px; padding: 4px; flex: 1; }
   .filter-switch button {
     flex: 1; border: none; background: none; color: rgba(255,255,255,0.7); padding: 11px;
     border-radius: 18px; font-weight: 700; cursor: pointer; font-family: inherit; font-size: 14px;
   }
   .filter-switch button.active { background: var(--orange); color: #1a1a1a; }
-  .route-chat-btn {
-    position: absolute; right: 20px; bottom: 78px; z-index: 10;
-    border: none; background: none; padding: 0; cursor: pointer;
-    filter: drop-shadow(0 4px 10px rgba(0,0,0,0.35));
-  }
-  .route-chat-btn:disabled { opacity: 0.35; cursor: default; filter: none; }
 
   .flash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
   .flash-title { font-size: 19px; font-weight: 800; }
@@ -295,14 +290,18 @@
   <div class="overlay-card">
     <div class="route-header">
       <div class="route-pills" id="route-pills"></div>
-      <button class="round-btn dark sm" title="Actualizar" onclick="loadAll()">⟳</button>
-      <button class="round-btn dark sm" title="Cerrar" onclick="closeRouteOverlay()">✕</button>
+      <div class="route-header-actions">
+        <button id="route-refresh-btn" class="round-btn" title="Actualizar" onclick="loadAll()"></button>
+        <button id="route-close-btn" class="round-btn" title="Cerrar" onclick="closeRouteOverlay()"></button>
+      </div>
     </div>
     <div class="route-list" id="route-list-body"></div>
-    <button id="route-chat-btn" class="route-chat-btn" title="Abrir chat de WhatsApp" onclick="openRouteChat()" disabled></button>
-    <div class="filter-switch">
-      <button data-filter="pendientes" onclick="setRouteFilter('pendientes')">Pendientes</button>
-      <button data-filter="entregados" onclick="setRouteFilter('entregados')">Entregados</button>
+    <div class="route-bottom-bar">
+      <div class="filter-switch">
+        <button data-filter="pendientes" onclick="setRouteFilter('pendientes')">Pendientes</button>
+        <button data-filter="entregados" onclick="setRouteFilter('entregados')">Entregados</button>
+      </div>
+      <button id="route-chat-btn" class="round-btn" title="Abrir chat de WhatsApp" onclick="openRouteChat()" disabled></button>
     </div>
   </div>
 </div>
@@ -1101,7 +1100,7 @@ function render() {
         <div class="counter-bar">
           <div class="counter-pill">${stops.length}</div>/<div class="counter-pill dark">${stops.length}</div><span class="counter-label">entregados</span>
           <button class="round-btn" style="margin-left:auto" onclick="openFlashOverlay()" title="Entrega flash">${iconFlash(40)}</button>
-          <button class="round-btn" onclick="loadAll()">${iconRefresh(40)}</button>
+          <button class="round-btn" style="margin-left:8px" onclick="loadAll()">${iconRefresh(40)}</button>
         </div>
       </div>
       <div class="body-pad">
@@ -1127,7 +1126,7 @@ function render() {
       <div class="counter-bar">
         <div class="counter-pill">${deliveredCount}</div>/<div class="counter-pill dark">${stops.length}</div><span class="counter-label">entregados</span>
         <button class="round-btn" style="margin-left:auto" onclick="openFlashOverlay()" title="Entrega flash">${iconFlash(40)}</button>
-        <button class="round-btn" onclick="loadAll()">${iconRefresh(40)}</button>
+        <button class="round-btn" style="margin-left:8px" onclick="loadAll()">${iconRefresh(40)}</button>
       </div>
       <div class="delivery-card">${skuHTML}</div>
     </div>
@@ -1415,6 +1414,7 @@ function closeRouteOverlay() { document.getElementById('route-overlay').classLis
 function setRouteFilter(f) { routeFilter = f; routeSelectedKey = null; renderRouteOverlay(); }
 
 function renderRouteOverlay() {
+  initRouteHeaderIcons();
   document.getElementById('route-pills').innerHTML = ['lunes', 'martes', 'miercoles', 'pickup'].map(d =>
     `<button class="day-chip ${d === selectedDay ? 'active' : ''}" onclick="changeDay('${d}')">${DAY_LABEL[d]}</button>`
   ).join('');
@@ -1459,9 +1459,17 @@ function routeSelectedContact() {
 function updateRouteChatBtn() {
   const btn = document.getElementById('route-chat-btn');
   if (!btn) return;
-  btn.innerHTML = iconMessage(56);
+  btn.innerHTML = iconMessage(48);
   const c = routeSelectedContact();
   btn.disabled = !(c && waUrl(c));
+}
+// Iconos estáticos del header del overlay de ruta (no cambian con cada render, pero se
+// completan acá para mantener su markup en el HTML estático junto al resto del overlay).
+function initRouteHeaderIcons() {
+  const refreshBtn = document.getElementById('route-refresh-btn');
+  const closeBtn = document.getElementById('route-close-btn');
+  if (refreshBtn && !refreshBtn.innerHTML) refreshBtn.innerHTML = iconRefresh(40);
+  if (closeBtn && !closeBtn.innerHTML) closeBtn.innerHTML = iconCancel(40);
 }
 function openRouteChat() {
   const c = routeSelectedContact();
