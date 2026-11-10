@@ -419,6 +419,7 @@ let PEDIDOS = [];
 let CONFIRMACIONES = {};
 let RUTA_ORDERS = {};
 let APODOS = {};
+let ENTREGA_TS = {}; // marca de tiempo de cada entrega, para ordenar "Entregados" por mas reciente primero
 let selectedDay = todayDefaultDay();
 let currentStopId = null; // the "current delivery" shown in the big card at the top
 let activeStopId = null;  // who the message/call/egg buttons act on — defaults to currentStopId,
@@ -431,6 +432,7 @@ const wk = getWeekDates(0);
 function getConf(clienteId) { return CONFIRMACIONES[`${wk.key}_${clienteId}`] || null; }
 function getRutaOrder(dia) { return RUTA_ORDERS[`ruta_order_${wk.key}_${dia}`] || null; }
 function getApodo(clienteId) { return APODOS[clienteId] || ''; }
+function getEntregaTs(clienteId) { return ENTREGA_TS[`${wk.key}_${clienteId}`] || 0; }
 
 async function saveApodo(clienteId, value) {
   APODOS[clienteId] = value;
@@ -760,11 +762,12 @@ async function loadAll() {
     ]);
     CLIENTES = clientes;
     PEDIDOS = pedidos;
-    CONFIRMACIONES = {}; RUTA_ORDERS = {}; APODOS = {};
+    CONFIRMACIONES = {}; RUTA_ORDERS = {}; APODOS = {}; ENTREGA_TS = {};
     kv.forEach(row => {
       if (row.key === 'CONFIRMACIONES') { try { CONFIRMACIONES = JSON.parse(row.value || '{}'); } catch (e) {} }
       if (row.key === 'ruta_orders') { try { RUTA_ORDERS = JSON.parse(row.value || '{}'); } catch (e) {} }
       if (row.key === 'apodos') { try { APODOS = JSON.parse(row.value || '{}'); } catch (e) {} }
+      if (row.key === 'entrega_ts') { try { ENTREGA_TS = JSON.parse(row.value || '{}'); } catch (e) {} }
     });
     render();
     if (document.getElementById('route-overlay').classList.contains('show')) renderRouteOverlay();
@@ -894,6 +897,13 @@ async function setEntregado(stop, entregado) {
     const idx = PEDIDOS.findIndex(p => p.id === stop.cliente.id);
     if (idx >= 0) PEDIDOS[idx].entregado = entregado;
     else PEDIDOS.push(await pedidoRow(stop, entregado));
+
+    // Para ordenar "Entregados" por orden real de entrega (mas reciente primero),
+    // no por el orden de la ruta.
+    const tsKey = `${wk.key}_${stop.cliente.id}`;
+    if (entregado) ENTREGA_TS[tsKey] = Date.now();
+    else delete ENTREGA_TS[tsKey];
+    sbUpsert('kv_store', { key: 'entrega_ts', value: JSON.stringify(ENTREGA_TS) }).catch(e => console.error(e));
 
     toast(entregado ? '✓ Marcado como entregado' : '↩ Entrega reversada');
     render();
@@ -1391,6 +1401,9 @@ function renderRouteOverlay() {
   const stops = buildStops(selectedDay);
   const quick = buildQuickStops(selectedDay);
   const list = routeFilter === 'pendientes' ? stops.filter(s => !s.entregado) : stops.filter(s => s.entregado);
+  // "Entregados" se ordena por orden real de entrega (mas reciente primero), no por el
+  // orden de la ruta — los sin marca de tiempo (entregados antes de este cambio) quedan al final.
+  if (routeFilter === 'entregados') list.sort((a, b) => getEntregaTs(b.cliente.id) - getEntregaTs(a.cliente.id));
 
   // El número mostrado es la posición absoluta dentro del día completo (igual que el
   // contador de la tarjeta principal), no la posición dentro de esta sublista filtrada —
