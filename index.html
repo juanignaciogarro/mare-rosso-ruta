@@ -113,6 +113,11 @@
   }
   .next-row-note .warn { flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
   .next-row.faded:not(.selected) .next-row-note { color: #E2BE9D; }
+  .next-row .parada-skus { margin-top: 4px; }
+  .next-row .parada-sku { background: var(--cream); color: var(--ink2); }
+  .next-row .parada-sku.cafe { background: rgba(240,156,83,0.18); color: var(--orange-dark); }
+  .next-row.faded:not(.selected) .parada-sku { background: #F2F2F2; color: #C7C7C7; }
+  .next-row.faded:not(.selected) .parada-sku.cafe { background: #F2F2F2; color: #D9B99A; }
   /* Botones con assets reales de Figma: el propio SVG trae su círculo/sombra,
      así que el <button> queda sin fondo/borde propio — solo centra el ícono. */
   .chevron-btn, .round-btn, .egg-btn {
@@ -149,6 +154,7 @@
   .overlay-card, .route-list { scrollbar-width: none; -ms-overflow-style: none; }
   .overlay-card::-webkit-scrollbar, .route-list::-webkit-scrollbar { display: none; width: 0; height: 0; }
   .overlay-card {
+    position: relative;
     background: var(--ink); color: #fff; width: 100%; max-width: 520px; border-radius: 32px 32px 0 0;
     padding: 24px 20px; max-height: 85vh; overflow-y: auto;
   }
@@ -191,6 +197,8 @@
   .parada-row .info { flex: 1; min-width: 0; cursor: pointer; }
   .parada-row .name { font-weight: 800; font-size: 16px; }
   .parada-row .addr { color: rgba(255,255,255,0.55); font-size: 13px; margin-top: 1px; }
+  .parada-row.selected { background: rgba(255,255,255,0.08); border-radius: 14px; margin: 0 -12px; padding: 12px; }
+  .parada-row.selected + .parada-row { border-top-color: transparent; }
   .parada-skus { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
   .parada-sku {
     display: inline-flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.12);
@@ -213,6 +221,12 @@
     border-radius: 18px; font-weight: 700; cursor: pointer; font-family: inherit; font-size: 14px;
   }
   .filter-switch button.active { background: var(--orange); color: #1a1a1a; }
+  .route-chat-btn {
+    position: absolute; right: 20px; bottom: 78px; z-index: 10;
+    border: none; background: none; padding: 0; cursor: pointer;
+    filter: drop-shadow(0 4px 10px rgba(0,0,0,0.35));
+  }
+  .route-chat-btn:disabled { opacity: 0.35; cursor: default; filter: none; }
 
   .flash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
   .flash-title { font-size: 19px; font-weight: 800; }
@@ -285,6 +299,7 @@
       <button class="round-btn dark sm" title="Cerrar" onclick="closeRouteOverlay()">✕</button>
     </div>
     <div class="route-list" id="route-list-body"></div>
+    <button id="route-chat-btn" class="route-chat-btn" title="Abrir chat de WhatsApp" onclick="openRouteChat()" disabled></button>
     <div class="filter-switch">
       <button data-filter="pendientes" onclick="setRouteFilter('pendientes')">Pendientes</button>
       <button data-filter="entregados" onclick="setRouteFilter('entregados')">Entregados</button>
@@ -423,8 +438,11 @@ let ENTREGA_TS = {}; // marca de tiempo de cada entrega, para ordenar "Entregado
 let selectedDay = todayDefaultDay();
 let currentStopId = null; // the "current delivery" shown in the big card at the top
 let activeStopId = null;  // who the message/call/egg buttons act on — defaults to currentStopId,
-                           // but can be overridden by tapping one of the next stops or a route-overlay row
+                           // but can be overridden by tapping one of the next stops
 let routeFilter = 'pendientes';
+let routeSelectedKey = null; // selection inside the full route list ('c:<clienteId>' or 'q:<pedidoId>'),
+                              // used only to target the floating WhatsApp-chat button there — resets
+                              // whenever the visible list changes (open overlay, change day, change tab)
 let editingApodo = false;
 let STOPS_BY_ID = {};
 const wk = getWeekDates(0);
@@ -992,6 +1010,7 @@ function changeDay(d) {
   selectedDay = d;
   currentStopId = null;
   activeStopId = null;
+  routeSelectedKey = null;
   render();
   renderRouteOverlay();
 }
@@ -1135,6 +1154,7 @@ function render() {
               <div class="info">
                 <div class="name">${s.cliente.nombre}</div>
                 <div class="addr">${(s.cliente.zona || '') + (s.cliente.notas ? ' | ' + s.cliente.notas : '')}</div>
+                ${skuBadges(withCafeIfNoted(s.parts, s.conf && s.conf.nota))}
                 ${s.conf && s.conf.nota ? `<div class="next-row-note"><span class="warn">${iconNoteWarn(16)}</span>${s.conf.nota}</div>` : ''}
               </div>
             </div>`).join('')}
@@ -1386,12 +1406,13 @@ async function saveFlashDelivery() {
 // Route overlay (full day, drag-reorder, pendientes/entregados)
 // ═══════════════════════════════════════════════
 function openRouteOverlay() {
+  routeSelectedKey = null;
   renderRouteOverlay();
   document.getElementById('route-overlay').classList.add('show');
 }
 function closeRouteOverlay() { document.getElementById('route-overlay').classList.remove('show'); }
 
-function setRouteFilter(f) { routeFilter = f; renderRouteOverlay(); }
+function setRouteFilter(f) { routeFilter = f; routeSelectedKey = null; renderRouteOverlay(); }
 
 function renderRouteOverlay() {
   document.getElementById('route-pills').innerHTML = ['lunes', 'martes', 'miercoles', 'pickup'].map(d =>
@@ -1415,6 +1436,38 @@ function renderRouteOverlay() {
   document.getElementById('route-list-body').innerHTML = html;
   document.querySelectorAll('.filter-switch button').forEach(b => b.classList.toggle('active', b.dataset.filter === routeFilter));
   if (routeFilter === 'pendientes') initRouteDragDrop();
+  updateRouteChatBtn();
+}
+
+// Selección dentro de la lista completa de ruta (independiente de activeStopId, que es
+// del card principal): 1 tap selecciona/deselecciona una fila, y habilita el botón
+// flotante de WhatsApp para esa fila. Entregas flash no tienen id de cliente, así que
+// la key lleva un prefijo ('c:' cliente normal, 'q:' entrega flash) para no confundirlas.
+function selectRouteStop(key) {
+  routeSelectedKey = (routeSelectedKey === key) ? null : key;
+  renderRouteOverlay();
+}
+function routeSelectedContact() {
+  if (!routeSelectedKey) return null;
+  const sep = routeSelectedKey.indexOf(':');
+  const kind = routeSelectedKey.slice(0, sep);
+  const id = parseInt(routeSelectedKey.slice(sep + 1), 10);
+  if (kind === 'c') { const s = STOPS_BY_ID[id]; return s ? s.cliente : null; }
+  if (kind === 'q') return buildQuickStops(selectedDay).find(q => q.pedido.id === id) || null;
+  return null;
+}
+function updateRouteChatBtn() {
+  const btn = document.getElementById('route-chat-btn');
+  if (!btn) return;
+  btn.innerHTML = iconMessage(56);
+  const c = routeSelectedContact();
+  btn.disabled = !(c && waUrl(c));
+}
+function openRouteChat() {
+  const c = routeSelectedContact();
+  const wa = c && waUrl(c);
+  if (!wa) return;
+  openExternal(wa);
 }
 
 // Pequeña identificación de qué formato/SKU pidió cada cliente, para la lista completa.
@@ -1438,12 +1491,14 @@ function paradaRow(s, i, draggable) {
   const addr = (c.zona || '') + (c.notas ? ' — ' + c.notas : '');
   const nota = s.conf && s.conf.nota;
   const parts = withCafeIfNoted(s.parts, nota);
+  const key = 'c:' + c.id;
+  const selected = key === routeSelectedKey ? ' selected' : '';
   if (draggable) {
     return `
-    <div class="parada-row" data-client-id="${c.id}">
+    <div class="parada-row${selected}" data-client-id="${c.id}">
       <div class="drag-handle">⠿</div>
       <div class="idx">${i + 1}</div>
-      <div class="info" onclick="selectStop(${c.id})">
+      <div class="info" onclick="selectRouteStop('${key}')">
         <div class="name">${c.nombre}</div>
         <div class="addr">${addrLink(c, addr)}</div>
         ${skuBadges(parts)}
@@ -1452,19 +1507,21 @@ function paradaRow(s, i, draggable) {
     </div>`;
   }
   return `
-    <div class="parada-row">
+    <div class="parada-row${selected}">
       <div class="idx">✓</div>
-      <div class="info"><div class="name">${c.nombre}</div><div class="addr">${addrLink(c, addr)}</div>${skuBadges(parts)}${noteLine(nota)}</div>
+      <div class="info" onclick="selectRouteStop('${key}')"><div class="name">${c.nombre}</div><div class="addr">${addrLink(c, addr)}</div>${skuBadges(parts)}${noteLine(nota)}</div>
       <button class="round-btn dark sm" onclick="setEntregado(STOPS_BY_ID[${c.id}], false)">↩</button>
     </div>`;
 }
 function quickParadaRow(q) {
   const addr = (q.zona || '') + (q.notas ? ' — ' + q.notas : '');
   const parts = withCafeIfNoted(q.parts, q.notas);
+  const key = 'q:' + q.pedido.id;
+  const selected = key === routeSelectedKey ? ' selected' : '';
   return `
-    <div class="parada-row">
+    <div class="parada-row${selected}">
       <div class="idx">⚡</div>
-      <div class="info"><div class="name">${q.nombre}</div><div class="addr">${addrLink(q, addr)}</div>${skuBadges(parts)}</div>
+      <div class="info" onclick="selectRouteStop('${key}')"><div class="name">${q.nombre}</div><div class="addr">${addrLink(q, addr)}</div>${skuBadges(parts)}</div>
     </div>`;
 }
 
