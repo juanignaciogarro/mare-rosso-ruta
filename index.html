@@ -97,7 +97,13 @@
   .body-pad {
     flex: 1; min-height: 0; display: flex; flex-direction: column;
     justify-content: space-between; padding: 40px 16px 20px;
+    /* Red de seguridad: en el peor de los casos (pantalla muy chica/angosta, notas muy
+       largas) el contenido puede seguir sin entrar incluso truncando direcciones — que se
+       pueda scrollear hasta el botón del huevo en vez de quedar inalcanzable es preferible
+       a que quede recortado por "overflow:hidden" del <main>. */
+    overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none;
   }
+  .body-pad::-webkit-scrollbar { display: none; width: 0; height: 0; }
 
   .counter-bar { display: flex; align-items: center; gap: 8px; color: #fff; margin-top: 30px; }
   .counter-pill {
@@ -116,11 +122,18 @@
   .client-block { flex-shrink: 0; }
   .client-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
   .client-name { font-size: clamp(22px, 5.5vw, 28px); font-weight: 800; line-height: 1.2; }
-  .client-row { display: flex; justify-content: flex-start; align-items: baseline; gap: 18px; margin-top: 8px; flex-wrap: wrap; }
+  /* nowrap a propósito: en pantallas angostas, zona+dirección en 2 líneas (o la
+     dirección envolviendo dentro de su propia línea) suma alto variable al bloque del
+     cliente actual — eso es lo que en ciertos aspect ratios empuja la action-bar (abajo
+     del todo, siempre debe quedar visible mientras se maneja) fuera del viewport, y
+     main{overflow:hidden} la recorta en vez de mostrarla. Se trunca con "…" en vez de
+     dejarla crecer; la dirección completa sigue disponible via el pin de Waze y la ruta
+     completa. */
+  .client-row { display: flex; justify-content: flex-start; align-items: baseline; gap: 18px; margin-top: 8px; min-width: 0; }
   .waze-pin-btn { border: none; background: none; padding: 0; cursor: pointer; flex-shrink: 0; margin-right: 28px; }
   .waze-pin-btn:disabled { opacity: 0.5; }
-  .client-zona { color: var(--orange-dark); font-weight: 800; font-size: 15px; white-space: nowrap; }
-  .client-addr { text-align: left; font-size: 15px; }
+  .client-zona { color: var(--orange-dark); font-weight: 800; font-size: 15px; white-space: nowrap; flex-shrink: 0; }
+  .client-addr { text-align: left; font-size: 15px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .addr-link { color: inherit; text-decoration: none; }
   .client-addr .condo { color: var(--ink2); font-weight: 800; }
   .client-addr .casa { color: var(--ink); font-weight: 500; font-size: 20px; margin-left: 4px; }
@@ -142,7 +155,7 @@
   }
   .next-row .info { flex: 1; min-width: 0; }
   .next-row .name { font-weight: 800; font-size: 16px; }
-  .next-row .addr { color: var(--ink2); font-size: 13px; margin-top: 1px; }
+  .next-row .addr { color: var(--ink2); font-size: 13px; margin-top: 1px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .next-row.faded:not(.selected) .idx { border-color: #CFCFCF; color: #CFCFCF; }
   .next-row.faded:not(.selected) .name { color: #A3A3A3; }
   .next-row.faded:not(.selected) .addr { color: #C7C7C7; }
