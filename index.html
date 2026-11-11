@@ -32,7 +32,14 @@
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
-    margin: 0; padding: 0; height: 100%; height: 100dvh;
+    margin: 0; padding: 0;
+    /* iOS Safari a veces se queda con un valor de 100dvh "viejo" (más alto que el viewport
+       real) después de minimizar la app, bloquear la pantalla o cambiar de app y volver —
+       la barra de Safari a veces no termina de colapsar/expandir en el cálculo de dvh, así
+       que la acción de entrega queda empujada fuera de la pantalla hasta el próximo resize
+       real (como rotar el teléfono). --app-height la recalcula a mano en esos casos; ver
+       setAppHeight() más abajo. 100dvh queda como respaldo si JS todavía no corrió. */
+    height: 100%; height: 100dvh; height: var(--app-height, 100dvh);
     background: #fff; color: var(--ink);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     overflow: hidden;
@@ -1759,6 +1766,24 @@ function persistNewOrder(newPendingOrder) {
 // ═══════════════════════════════════════════════
 // Init
 // ═══════════════════════════════════════════════
+// Corrige el 100dvh "viejo" de iOS Safari (ver el comentario en html,body del <style>):
+// recalcula --app-height a mano ante cualquier evento que pueda delatar que el dvh del
+// navegador quedó desactualizado — volver de segundo plano, desbloquear la pantalla,
+// rotar, o el propio resize del visualViewport (que en iOS SÍ se dispara siempre,
+// aunque el dvh de CSS se haya quedado pegado).
+function setAppHeight() {
+  const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+  document.documentElement.style.setProperty('--app-height', h + 'px');
+}
+setAppHeight();
+window.addEventListener('resize', setAppHeight);
+window.addEventListener('orientationchange', setAppHeight);
+window.addEventListener('pageshow', setAppHeight);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) setAppHeight(); });
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', setAppHeight);
+}
+
 initPager();
 loadAll();
 setInterval(loadAll, 25000); // mismo espíritu que el auto-sync de 30s del CRM original
