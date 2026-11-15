@@ -1451,14 +1451,27 @@ function initCubeRotate() {
   let dragging = false, lastX = 0, lastY = 0;
   let pinchDist = 0;
   let camDist = DEFAULT_CUBE_DIST;
+  let panX = 0, panY = 0; // posición del pivot — permite correr el modelo arriba/abajo/izq/der
   const dist2 = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const midpoint = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
 
   resetCubeView = () => {
     rotX = DEFAULT_CUBE_ROT.x; rotY = DEFAULT_CUBE_ROT.y;
     pivot.rotation.set(rotX, rotY, 0);
     camDist = DEFAULT_CUBE_DIST;
     camera.position.z = camDist;
+    panX = 0; panY = 0;
+    pivot.position.set(0, 0, 0);
   };
+
+  // Con 2 dedos, cuánto mundo representa 1px de pantalla a la distancia actual de
+  // la cámara — para que el paneo siga al dedo 1 a 1, sin importar el zoom.
+  function panUnitsPerPixel() {
+    const rect = container.getBoundingClientRect();
+    const h = 2 * camDist * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+    const w = h * camera.aspect;
+    return { w: w / rect.width, h: h / rect.height };
+  }
 
   // Un toque corto (sin arrastre, sin pellizco) raycastea contra el modelo para
   // mostrar qué SKU tiene esa caja — se distingue del arrastre/zoom por el movimiento.
@@ -1513,20 +1526,34 @@ function initCubeRotate() {
     } else if (pointers.size === 2) {
       dragging = false;
       gestureHadPinch = true;
-      pinchDist = dist2(...pointers.values());
+      const pts = [...pointers.values()];
+      pinchDist = dist2(...pts);
+      lastMid = midpoint(...pts);
     }
   });
+  let lastMid = null;
   container.addEventListener('pointermove', e => {
     if (!pointers.has(e.pointerId)) return;
     e.preventDefault();
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.size === 2) {
-      const d = dist2(...pointers.values());
+      const pts = [...pointers.values()];
+      const d = dist2(...pts);
       if (pinchDist > 0) {
         camDist = Math.min(12, Math.max(1.5, camDist - (d - pinchDist) * 0.02));
         camera.position.z = camDist;
       }
       pinchDist = d;
+      // Panear con el punto medio de los 2 dedos — se mueve junto con el zoom, como
+      // en un mapa: acercar/alejar y correr el modelo al mismo tiempo si hace falta.
+      const mid = midpoint(...pts);
+      if (lastMid) {
+        const unit = panUnitsPerPixel();
+        panX += (mid.x - lastMid.x) * unit.w;
+        panY -= (mid.y - lastMid.y) * unit.h; // pantalla hacia abajo = Y del mundo hacia abajo
+        pivot.position.set(panX, panY, 0);
+      }
+      lastMid = mid;
       return;
     }
     if (!dragging) return;
@@ -1539,7 +1566,7 @@ function initCubeRotate() {
   const stop = e => {
     const isTap = pointers.size === 1 && !gestureHadPinch && dist2({ x: e.clientX, y: e.clientY }, { x: downX, y: downY }) < 6;
     pointers.delete(e.pointerId);
-    if (pointers.size < 2) pinchDist = 0;
+    if (pointers.size < 2) { pinchDist = 0; lastMid = null; }
     if (pointers.size === 0) dragging = false;
     if (isTap) handleCrateTap(e.clientX, e.clientY);
   };
