@@ -61,8 +61,15 @@
     flex: 1; min-height: 0; overflow-y: auto; padding: 24px 20px 24px;
     padding-top: max(24px, env(safe-area-inset-top));
   }
-  .dash-total { font-size: clamp(38px, 11vw, 52px); font-weight: 500; color: #F0B953; margin-bottom: 10px; }
-  .dash-title { font-size: clamp(24px, 6.5vw, 30px); font-weight: 800; color: var(--orange); margin-bottom: 18px; }
+  .dash-week-nav { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; }
+  .dash-week-btn { border: none; background: none; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; font-family: inherit; }
+  .dash-week-next svg { transform: scaleX(-1); }
+  .dash-week-text { margin-left: 8px; font-size: clamp(18px, 5.25vw, 22px); font-weight: 600; color: var(--ink); white-space: nowrap; }
+  .dash-week-year { font-size: 1.3em; font-weight: 300; color: #C9C9C9; }
+  .dash-solicitados, .dash-title { font-size: clamp(19px, 5.5vw, 22px); font-weight: 800; color: var(--orange); }
+  .dash-solicitados { margin-bottom: 2px; }
+  .dash-total { font-size: clamp(38px, 11vw, 52px); font-weight: 500; color: #F0B953; margin-bottom: 20px; }
+  .dash-title { margin-bottom: 18px; }
   .dash-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 22px; }
   .dash-pill {
     padding: 10px 18px; border-radius: 20px; border: 2px solid var(--ink); background: #fff;
@@ -71,21 +78,97 @@
   .dash-pill.active { background: var(--orange); border-color: var(--orange); color: #1a1a1a; }
   /* Layout asimétrico tipo "bento": la fila de arriba se reparte en partes iguales, la de
      abajo no (el cartón chico pesa más que la bolsa de café, que queda casi cuadrada). */
-  .dash-grid { display: flex; flex-direction: column; gap: 14px; }
-  .dash-row { display: flex; gap: 14px; }
+  .dash-grid { display: flex; flex-direction: column; gap: 10px; }
+  .dash-row { display: flex; gap: 10px; }
   .dash-row-2 .dash-tile:first-child { flex: 1.7; }
   .dash-row-2 .dash-tile:last-child { flex: 1; }
   .dash-tile {
-    flex: 1; border-radius: 28px; padding: 22px; min-height: 150px;
+    flex: 1; border-radius: 24px; padding: 16px; min-height: 110px;
     display: flex; align-items: center; justify-content: center; gap: 14px; overflow: hidden;
   }
   .dash-tile.dash-dark { background: var(--orange); }
   .dash-tile.dash-light { background: var(--cream); }
   .dash-tile.dash-gold { background: #E3A23D; }
-  .dash-num { font-size: 34px; font-weight: 800; line-height: 1; flex-shrink: 0; }
+  .dash-num { font-size: 36px; font-weight: 400; line-height: 1; flex-shrink: 0; }
   .dash-tile.dash-dark .dash-num, .dash-tile.dash-gold .dash-num { color: #fff; }
   .dash-tile.dash-light .dash-num { color: var(--orange); }
   .dash-icon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .dash-refill-banner {
+    margin-top: 12px; background: #FDEAEA; border: 2px solid #EF4D5A; border-radius: 16px;
+    padding: 12px 16px; display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .dash-refill-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .dash-refill-text { color: #C62F3D; font-weight: 800; font-size: 15px; }
+  .dash-refill-boundary { color: #C62F3D; font-size: 11px; font-weight: 600; opacity: 0.85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dash-refill-btn {
+    border: none; background: #EF4D5A; color: #fff; font-weight: 800; font-size: 13px;
+    padding: 8px 16px; border-radius: 18px; cursor: pointer; font-family: inherit; flex-shrink: 0;
+  }
+
+  /* PROTOTIPO: pestaña para deslizar hacia arriba desde el dashboard y revelar una
+     pantalla aparte con un cubo 3D que se puede rotar con el dedo. */
+  #page-second { position: relative; }
+  .cube-pull-tab {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 34px;
+    display: flex; align-items: center; justify-content: center; touch-action: none; z-index: 5;
+  }
+  .cube-pull-tab::before { content: ''; width: 44px; height: 5px; border-radius: 3px; background: var(--ink3); }
+  .cube-sheet {
+    position: fixed; inset: 0; background: #fff; z-index: 600;
+    display: flex; flex-direction: column; transform: translateY(100%);
+    transition: transform 0.3s ease; touch-action: none;
+  }
+  .cube-sheet.no-anim { transition: none; }
+  .cube-sheet-handle {
+    flex-shrink: 0; height: 34px; display: flex; align-items: center; justify-content: center;
+    padding-top: env(safe-area-inset-top); touch-action: none;
+  }
+  .cube-sheet-handle::before { content: ''; width: 44px; height: 5px; border-radius: 3px; background: var(--ink3); }
+  .cube-load-bar {
+    position: absolute; top: calc(env(safe-area-inset-top) + 40px); left: 50%; transform: translateX(-50%);
+    z-index: 2; display: flex; gap: 10px;
+  }
+  .cube-load-btn {
+    border: none; background: var(--orange); color: #1a1a1a; font-weight: 800; font-size: 14px;
+    padding: 10px 20px; border-radius: 20px; cursor: pointer; font-family: inherit; white-space: nowrap;
+  }
+  .cube-extras-btn { background: var(--cream); }
+  .cube-extras-btn:disabled { opacity: 0.4; cursor: default; }
+  /* Franja arriba del vehículo (no encima) para no competir con el modelo 3D — se
+     reserva el alto siempre, aunque no haya ninguna caja seleccionada, para que el
+     vehículo no salte de lugar al tocar una caja. */
+  .crate-info-panel {
+    flex-shrink: 0; min-height: 160px; margin: calc(env(safe-area-inset-top) + 84px) 20px 0;
+    display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap;
+  }
+  .crate-info-item { display: flex; flex-direction: row; align-items: center; gap: 10px; }
+  .crate-info-qty { font-size: 60px; font-weight: 400; color: var(--ink); line-height: 1; }
+  .cube-scene { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; touch-action: none; }
+  .cube-scene canvas { touch-action: none; display: block; }
+  .extras-field { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.12); }
+  .extras-field label { font-weight: 700; font-size: 15px; }
+  .extras-field input {
+    width: 70px; text-align: center; font-size: 16px; font-weight: 700; font-family: inherit;
+    border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.08); color: #fff;
+    border-radius: 10px; padding: 8px;
+  }
+  .capacidad-excedida-banner {
+    position: fixed; left: 16px; right: 16px; bottom: calc(env(safe-area-inset-bottom) + 16px);
+    z-index: 900; display: none; align-items: center; justify-content: space-between;
+    background: #EF4D5A; color: #fff; font-weight: 800; font-size: 15px;
+    padding: 16px 18px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  }
+  .capacidad-excedida-banner.show { display: flex; }
+  .capacidad-excedida-banner button { border: none; background: none; color: #fff; font-size: 20px; cursor: pointer; line-height: 1; padding: 0 4px; }
+  .sticky-banner {
+    position: fixed; left: 16px; right: 16px; bottom: calc(env(safe-area-inset-bottom) + 16px);
+    z-index: 900; display: none; align-items: center; justify-content: space-between; gap: 12px;
+    background: var(--ink); color: #fff; font-weight: 700; font-size: 14px;
+    padding: 14px 16px; border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  .sticky-banner.show { display: flex; }
+  .sticky-banner button { border: none; background: none; color: #fff; font-size: 20px; cursor: pointer; line-height: 1; padding: 0 4px; flex-shrink: 0; }
+
   #content { flex: 1; display: flex; flex-direction: column; min-height: 0; }
   .empty-wrap { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; }
   .empty-state { text-align: center; color: var(--ink2); padding: 0 20px; font-size: 18px; }
@@ -189,7 +272,7 @@
     border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.18);
   }
   .round-btn.dark.sm { width: 40px; height: 40px; font-size: 16px; }
-  .round-btn:disabled, .chevron-btn:disabled { opacity: 0.35; }
+  .round-btn:disabled, .chevron-btn:disabled, .dash-week-btn:disabled { opacity: 0.35; }
   /* Pequeño "bounce" al estilo Material al tocar un ícono — se agrega la clase por JS
      y se quita sola al terminar, para que pueda volver a dispararse en el próximo tap. */
   @keyframes icon-press-bounce {
@@ -216,6 +299,7 @@
     align-items: flex-end; justify-content: center; z-index: 500;
   }
   .overlay-backdrop.show { display: flex; }
+  #extras-overlay { z-index: 700; } /* por encima de .cube-sheet (600), se abre desde ahí */
   /* Interacción táctil — nunca mostrar la barra de scroll, aunque siga siendo desplazable. */
   .overlay-card, .route-list { scrollbar-width: none; -ms-overflow-style: none; }
   .overlay-card::-webkit-scrollbar, .route-list::-webkit-scrollbar { display: none; width: 0; height: 0; }
@@ -347,17 +431,83 @@
   <div id="pager">
     <div class="pager-page" id="page-second">
       <div class="dash-page">
+        <div class="dash-week-nav">
+          <button class="dash-week-btn" id="dash-week-prev" onclick="shiftDashWeek(-1)" title="Semana anterior"></button>
+          <button class="dash-week-btn dash-week-next" id="dash-week-next" onclick="shiftDashWeek(1)" title="Semana siguiente"></button>
+          <div class="dash-week-text"><span id="dash-week-range"></span> <span class="dash-week-year" id="dash-week-year"></span></div>
+        </div>
+        <div class="dash-solicitados">Solicitados</div>
         <div class="dash-total" id="dash-total"></div>
         <div class="dash-title">Por entregar</div>
         <div class="dash-pills" id="dash-pills"></div>
         <div class="dash-grid" id="dash-grid"></div>
+        <div class="dash-refill-banner" id="dash-refill-banner" style="display:none">
+          <div class="dash-refill-info">
+            <div class="dash-refill-text">Hoy se necesita refill</div>
+            <div class="dash-refill-boundary" id="dash-refill-boundary"></div>
+          </div>
+          <button class="dash-refill-btn" onclick="openRefillPicker()">Setear refill</button>
+        </div>
       </div>
+      <div class="cube-pull-tab" id="cube-pull-tab"></div>
     </div>
     <div class="pager-page" id="page-main" onclick="handleBackgroundTap(event)">
       <div id="content"><div class="empty-state">Cargando…</div></div>
     </div>
   </div>
 </main>
+
+<div class="cube-sheet" id="cube-sheet">
+  <div class="cube-sheet-handle" id="cube-sheet-handle"></div>
+  <div class="cube-load-bar">
+    <button class="cube-load-btn" onclick="cargarDino()">Cargar Dino</button>
+    <button class="cube-load-btn cube-extras-btn" id="extras-btn" onclick="openExtrasOverlay()" disabled>Extras</button>
+  </div>
+  <div class="crate-info-panel" id="crate-info-panel"></div>
+  <div class="cube-scene" id="cube-scene"></div>
+</div>
+
+<div id="extras-overlay" class="overlay-backdrop" onclick="if(event.target===this) closeExtrasOverlay()">
+  <div class="overlay-card">
+    <div class="route-header">
+      <div class="flash-title">Extras</div>
+      <button class="round-btn" id="extras-close-btn" title="Cerrar" onclick="closeExtrasOverlay()"></button>
+    </div>
+    <div class="extras-field">
+      <label>Grandes con plástico</label>
+      <input type="number" min="0" inputmode="numeric" id="extras-gcp" value="0">
+    </div>
+    <div class="extras-field">
+      <label>Grandes sin plástico</label>
+      <input type="number" min="0" inputmode="numeric" id="extras-gsp" value="0">
+    </div>
+    <div class="extras-field">
+      <label>Pequeños</label>
+      <input type="number" min="0" inputmode="numeric" id="extras-pcp" value="0">
+    </div>
+    <button class="dash-refill-btn" onclick="applyExtras()">Agregar</button>
+  </div>
+</div>
+
+<div id="capacidad-excedida-banner" class="capacidad-excedida-banner">
+  <span>Capacidad excedida</span>
+  <button onclick="document.getElementById('capacidad-excedida-banner').classList.remove('show')">×</button>
+</div>
+
+<div id="sticky-banner" class="sticky-banner">
+  <span id="sticky-banner-text"></span>
+  <button onclick="closeStickyBanner()">×</button>
+</div>
+
+<div id="refill-picker-overlay" class="overlay-backdrop" onclick="if(event.target===this) closeRefillPicker()">
+  <div class="overlay-card">
+    <div class="route-header">
+      <div class="flash-title">Último cliente antes del refill</div>
+      <button class="round-btn" id="refill-picker-close-btn" title="Cerrar" onclick="closeRefillPicker()"></button>
+    </div>
+    <div class="route-list" id="refill-picker-list"></div>
+  </div>
+</div>
 
 <div id="message-overlay" class="overlay-backdrop" onclick="if(event.target===this) closeMessageOverlay()">
   <div class="overlay-card" id="message-overlay-body"></div>
@@ -430,6 +580,9 @@
 
 <div id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
 <script>
 // ═══════════════════════════════════════════════
 // CONFIG — TEST vs LIVE. Only ever point at LIVE deliberately,
@@ -495,6 +648,13 @@ function getWeekDates(offset = 0) {
 function todayDefaultDay() {
   const map = { 1: 'lunes', 2: 'martes', 3: 'miercoles' };
   return map[new Date().getDay()] || 'lunes';
+}
+
+// Filtro activo por defecto en el dashboard "Por entregar": lunes/martes/miércoles
+// muestran su propio día, el resto de la semana (jue-dom) arranca en "Total".
+function dashDefaultDay() {
+  const map = { 1: 'lunes', 2: 'martes', 3: 'miercoles' };
+  return map[new Date().getDay()] || 'total';
 }
 
 const DAY_LABEL = { lunes: 'Lun', martes: 'Mar', miercoles: 'Mié', pickup: 'Pickup' };
@@ -623,6 +783,37 @@ function skuIcon(prodKey, W) {
   const h = Math.round(W * 277 / 296);
   return `<svg width="${W}" height="${h}" viewBox="0 0 296 277">${SKU_ICON_MARKUP[prodKey] || ''}</svg>`;
 }
+
+// Íconos nuevos (assets provistos por el usuario), usados por ahora solo en el
+// dashboard "Por entregar" — no reemplazan a skuIcon() en el resto de la app.
+const DASH_PCP_ICON_MARKUP = `<rect x="15.5137" y="16" width="147.69" height="78.1887" rx="24.8218" fill="#FFEDD5"/>
+<path d="M137.761 104.252V109.216H40.956V104.252H137.761ZM173.753 68.26V40.956C173.753 21.0784 157.639 4.96436 137.761 4.96436H40.956C21.0784 4.96436 4.96436 21.0784 4.96436 40.956V68.26C4.96436 88.1376 21.0784 104.252 40.956 104.252V109.216C18.3366 109.216 0 90.8793 0 68.26V40.956C0 18.3366 18.3366 0 40.956 0H137.761C160.38 0 178.717 18.3366 178.717 40.956V68.26C178.717 90.8793 160.38 109.216 137.761 109.216V104.252C157.639 104.252 173.753 88.1376 173.753 68.26Z" fill="black"/>
+<circle cx="137.785" cy="39.1527" r="14.1527" fill="#F09C53"/>
+<circle cx="133.539" cy="34.9069" r="4.24582" fill="#FFC99A"/>
+<circle cx="137.785" cy="70.289" r="14.1527" fill="#F09C53"/>
+<circle cx="133.539" cy="66.0432" r="4.24582" fill="#FFC99A"/>
+<circle cx="105.436" cy="39.1527" r="14.1527" fill="#F09C53"/>
+<circle cx="101.19" cy="34.9069" r="4.24582" fill="#FFC99A"/>
+<circle cx="105.436" cy="70.289" r="14.1527" fill="#F09C53"/>
+<circle cx="101.19" cy="66.0432" r="4.24582" fill="#FFC99A"/>
+<circle cx="73.0863" cy="39.1527" r="14.1527" fill="#F09C53"/>
+<circle cx="68.8405" cy="34.9069" r="4.24582" fill="#FFC99A"/>
+<circle cx="73.0863" cy="70.289" r="14.1527" fill="#F09C53"/>
+<circle cx="68.8405" cy="66.0432" r="4.24582" fill="#FFC99A"/>
+<circle cx="40.7377" cy="39.1527" r="14.1527" fill="#F09C53"/>
+<circle cx="36.4919" cy="34.9069" r="4.24582" fill="#FFC99A"/>
+<circle cx="40.7377" cy="70.289" r="14.1527" fill="#F09C53"/>
+<circle cx="36.4919" cy="66.0432" r="4.24582" fill="#FFC99A"/>`;
+const DASH_CAFE_ICON_MARKUP = `<path d="M3.13281 18.028V66.5632H48.1453V18.028L43.6441 8.63408V3.1543H7.43836V8.63408L3.13281 18.028Z" fill="#FFF2DE"/>
+<path d="M7.25162 1.28117C7.37894 1.28008 7.50627 1.27898 7.63745 1.27786C7.77768 1.27863 7.91791 1.27941 8.06239 1.28022C8.21109 1.27952 8.35978 1.27882 8.51298 1.2781C8.92638 1.27656 9.33974 1.27678 9.75314 1.27773C10.1987 1.27835 10.6443 1.27673 11.0899 1.2754C11.963 1.27316 12.8362 1.27306 13.7094 1.27374C14.4189 1.27426 15.1285 1.27408 15.838 1.27338C15.9389 1.27328 16.0398 1.27319 16.1437 1.27309C16.3486 1.27289 16.5536 1.27269 16.7585 1.27249C18.6814 1.27071 20.6043 1.27142 22.5273 1.2729C24.2874 1.27419 26.0476 1.27251 27.8078 1.26941C29.614 1.26625 31.4202 1.265 33.2265 1.26586C34.241 1.26632 35.2555 1.26602 36.27 1.26375C37.1336 1.26185 37.9973 1.26176 38.8609 1.26402C39.3017 1.26513 39.7425 1.2654 40.1834 1.26342C40.6608 1.26172 41.1382 1.26319 41.6156 1.26549C41.7556 1.26425 41.8955 1.263 42.0397 1.26172C42.9756 1.27105 42.9756 1.27105 43.4001 1.57788C43.6948 2.03672 43.7226 2.38774 43.6748 2.92301C43.3048 7.69258 44.4175 10.8397 46.7261 14.8966C47.866 16.9196 48.1145 18.7397 48.113 21.0468C48.1133 21.2442 48.1137 21.4416 48.1141 21.6391C48.1152 22.1793 48.1154 22.7196 48.1155 23.2599C48.1157 23.8434 48.1167 24.4269 48.1176 25.0104C48.1193 26.2848 48.1201 27.5592 48.1207 28.8336C48.121 29.6292 48.1216 30.4249 48.1222 31.2206C48.1237 33.4237 48.1251 35.6269 48.1255 37.8301C48.1255 37.9709 48.1256 38.1118 48.1256 38.2569C48.1256 38.3981 48.1256 38.5393 48.1257 38.6847C48.1257 38.9708 48.1258 39.2569 48.1258 39.543C48.1259 39.6849 48.1259 39.8268 48.1259 39.973C48.1264 42.2755 48.1287 44.578 48.1317 46.8805C48.1348 49.2447 48.1364 51.6089 48.1365 53.9731C48.1366 55.3004 48.1374 56.6277 48.1397 57.9551C48.1417 59.0845 48.1424 60.2139 48.1413 61.3433C48.1408 61.9197 48.1409 62.4961 48.1427 63.0725C48.1444 63.5998 48.1442 64.1271 48.1427 64.6545C48.1424 64.8455 48.1428 65.0365 48.1439 65.2275C48.1454 65.4867 48.1442 65.7459 48.1429 66.0051C48.1429 66.1492 48.143 66.2933 48.1431 66.4418C48.0727 67.0037 47.8423 67.34 47.4491 67.7349C47.1277 67.7677 47.1277 67.7677 46.7127 67.7683C46.5551 67.7691 46.3974 67.77 46.235 67.7708C46.0584 67.7704 45.8819 67.77 45.7054 67.7696C45.519 67.7701 45.3327 67.7707 45.1464 67.7714C44.6326 67.773 44.1188 67.7729 43.605 67.7726C43.0516 67.7726 42.4981 67.774 41.9447 67.7752C40.8598 67.7774 39.7748 67.7781 38.6898 67.7783C37.8083 67.7784 36.9267 67.7789 36.0451 67.7797C33.5478 67.782 31.0505 67.7832 28.5532 67.783C28.4184 67.783 28.2837 67.783 28.1448 67.783C28.0099 67.783 27.875 67.783 27.736 67.783C25.5491 67.7828 23.3621 67.7853 21.1752 67.789C18.9317 67.7927 16.6882 67.7945 14.4447 67.7943C13.1844 67.7942 11.924 67.7949 10.6636 67.7977C9.59059 67.8001 8.51756 67.8006 7.44451 67.7989C6.8967 67.798 6.34893 67.798 5.80113 67.8002C5.30001 67.8023 4.79896 67.8019 4.29784 67.7997C4.11619 67.7993 3.93454 67.7998 3.75289 67.8012C3.50666 67.803 3.26041 67.8013 3.01418 67.7995C2.8772 67.7995 2.74021 67.7996 2.59908 67.7996C2.154 67.7182 2.00464 67.5695 1.72876 67.2161C1.58816 66.7926 1.58327 66.4844 1.58299 66.0385C1.58257 65.8725 1.58216 65.7065 1.58173 65.5355C1.58192 65.3502 1.58212 65.1649 1.58233 64.9797C1.58209 64.7837 1.58179 64.5876 1.58145 64.3916C1.58065 63.8516 1.58067 63.3116 1.58083 62.7715C1.58085 62.1896 1.58014 61.6076 1.57953 61.0257C1.57845 59.8847 1.5781 58.7438 1.57803 57.6028C1.57797 56.6751 1.5777 55.7473 1.57729 54.8196C1.57615 52.1893 1.57556 49.559 1.57565 46.9286C1.57566 46.7158 1.57566 46.7158 1.57567 46.4986C1.57567 46.3566 1.57568 46.2145 1.57569 46.0681C1.57574 43.7679 1.5745 41.4677 1.57268 39.1676C1.57082 36.8057 1.56993 34.4439 1.57005 32.0821C1.57009 30.7562 1.56974 29.4302 1.56834 28.1043C1.56717 26.9747 1.56689 25.8451 1.56776 24.7156C1.56818 24.1396 1.5682 23.5636 1.56707 22.9876C1.56605 22.4594 1.56625 21.9312 1.56737 21.403C1.56756 21.2128 1.56733 21.0226 1.56661 20.8324C1.5574 18.2376 2.13354 16.3108 3.41027 14.0914C5.48446 10.4404 6.33064 7.50263 6.02428 3.28441C5.97607 2.58724 5.96124 2.08267 6.41423 1.51135C6.70725 1.27302 6.87705 1.28163 7.25162 1.28117ZM8.31558 3.66503C8.31558 5.07742 8.31558 6.48981 8.31558 7.945C12.2793 7.945 16.243 7.945 20.3268 7.945C20.3268 6.53261 20.3268 5.12022 20.3268 3.66503C16.3631 3.66503 12.3994 3.66503 8.31558 3.66503ZM22.6516 3.66503C22.6872 4.00542 22.7229 4.34581 22.7596 4.69652C23.1105 9.51124 21.1416 13.0188 18.8251 17.064C18.3456 18.0076 18.2437 18.9514 18.2457 19.9996C18.2457 20.0845 18.2457 20.1694 18.2457 20.2569C18.2458 20.534 18.2468 20.8112 18.2478 21.0884C18.248 21.2819 18.2482 21.4754 18.2483 21.669C18.2488 22.1758 18.2501 22.6826 18.2515 23.1894C18.2531 23.7988 18.2537 24.4083 18.2544 25.0178C18.2557 25.9413 18.2581 26.8649 18.2604 27.7885C19.6669 27.7885 21.0733 27.7885 22.5224 27.7885C22.5288 27.2025 22.5351 26.6165 22.5416 26.0128C22.5462 25.6375 22.5508 25.2621 22.5557 24.8868C22.5635 24.2935 22.571 23.7002 22.5769 23.1068C22.5818 22.6275 22.5878 22.1481 22.5945 21.6688C22.5969 21.4876 22.5988 21.3064 22.6004 21.1252C22.6251 18.2839 23.2408 16.2149 24.6086 13.7519C26.5963 10.1515 27.4382 7.82606 27.0428 3.66503C25.5937 3.66503 24.1446 3.66503 22.6516 3.66503ZM29.3676 3.66503C29.3676 5.07742 29.3676 6.48981 29.3676 7.945C33.3313 7.945 37.295 7.945 41.3788 7.945C41.3788 6.53261 41.3788 5.12022 41.3788 3.66503C37.4151 3.66503 33.4514 3.66503 29.3676 3.66503ZM7.92812 10.2795C6.76049 12.5071 6.76049 12.5071 5.62237 14.7496C5.47979 15.0346 5.33611 15.3191 5.19244 15.6037C4.448 17.0872 3.90788 18.3708 3.90847 20.0614C3.90821 20.224 3.90796 20.3866 3.90769 20.5542C3.90806 20.733 3.90844 20.9118 3.90883 21.0906C3.90877 21.2818 3.90866 21.4731 3.9085 21.6643C3.90821 22.1887 3.90872 22.7131 3.90937 23.2374C3.90993 23.8033 3.90974 24.3692 3.90964 24.9351C3.90958 25.9152 3.90998 26.8953 3.91071 27.8754C3.91176 29.2924 3.91209 30.7095 3.91226 32.1265C3.91254 34.4256 3.9134 36.7247 3.91462 39.0238C3.91581 41.257 3.91672 43.4903 3.91727 45.7235C3.9173 45.8626 3.91734 46.0017 3.91737 46.145C3.91764 47.2327 3.91789 48.3204 3.91814 49.4081C3.91936 54.7389 3.92196 60.0696 3.92436 65.4004C14.7926 65.4004 25.6609 65.4004 36.8585 65.4004C36.8648 62.0884 36.8711 58.7765 36.8776 55.3641C36.8822 53.2682 36.8868 51.1723 36.8918 49.0764C36.8944 47.9754 36.8969 46.8744 36.8995 45.7734C36.8998 45.6354 36.9001 45.4974 36.9004 45.3553C36.9056 43.1293 36.9098 40.9034 36.9137 38.6775C36.9177 36.392 36.9227 34.1066 36.9286 31.8211C36.9322 30.4116 36.935 29.0021 36.9369 27.5925C36.9383 26.6251 36.9406 25.6578 36.9436 24.6904C36.9453 24.1328 36.9466 23.5752 36.9468 23.0176C36.947 22.506 36.9484 21.9944 36.9507 21.4828C36.9513 21.2988 36.9515 21.1147 36.9512 20.9307C36.9493 19.4352 36.982 17.8826 37.5698 16.4872C37.6026 16.4089 37.6354 16.3307 37.6692 16.25C38.1591 15.1084 38.7337 14.0043 39.2962 12.8978C39.4664 12.5622 39.6364 12.2264 39.8057 11.8904C39.9101 11.6832 40.015 11.4764 40.1205 11.2698C40.3816 10.7986 40.3816 10.7986 40.4748 10.2795C36.6389 10.2795 32.8031 10.2795 28.851 10.2795C27.7149 12.4448 27.7149 12.4448 26.6075 14.6245C26.52 14.7994 26.4321 14.9741 26.3439 15.1486C25.2502 17.3121 24.8308 19.0509 24.8254 21.473C24.8245 21.8066 24.8225 22.1402 24.8201 22.4738C24.8133 23.4215 24.8071 24.3692 24.8051 25.3169C24.8038 25.8985 24.8 26.48 24.7946 27.0616C24.793 27.2829 24.7924 27.5041 24.7926 27.7253C24.7929 28.0336 24.7901 28.3417 24.7865 28.65C24.7874 28.7413 24.7882 28.8327 24.7891 28.9268C24.7815 29.3232 24.7646 29.55 24.5025 29.8553C24.1303 30.0259 23.8587 30.0427 23.4494 30.0437C23.2225 30.0455 23.2225 30.0455 22.9911 30.0474C22.8283 30.0466 22.6655 30.0458 22.4977 30.045C22.2465 30.0456 22.2465 30.0456 21.9902 30.0461C21.6362 30.0467 21.2822 30.0459 20.9281 30.0441C20.4744 30.0419 20.0208 30.0431 19.567 30.0455C19.134 30.0472 18.701 30.046 18.268 30.045C18.1049 30.0458 17.9418 30.0466 17.7738 30.0474C17.623 30.0462 17.4721 30.045 17.3167 30.0437C17.1173 30.0432 17.1173 30.0432 16.9138 30.0427C16.5814 29.9933 16.5814 29.9933 16.3498 29.82C16.0006 29.3366 16.0449 28.8189 16.044 28.2494C16.043 28.1022 16.043 28.1022 16.042 27.952C16.0401 27.6267 16.0393 27.3013 16.0385 26.9759C16.0378 26.7485 16.0371 26.5211 16.0363 26.2937C16.035 25.8157 16.0342 25.3377 16.0338 24.8597C16.033 24.2523 16.03 23.6449 16.0263 23.0376C16.0238 22.5669 16.0232 22.0962 16.023 21.6255C16.0226 21.4019 16.0216 21.1784 16.0199 20.9548C16.0054 18.9254 16.2151 17.1804 17.1545 15.3458C17.2216 15.2101 17.2886 15.0744 17.3577 14.9346C17.5702 14.5058 17.7859 14.0786 18.0021 13.6516C18.2233 13.2104 18.4441 12.7689 18.6645 12.3273C18.802 12.0524 18.9403 11.7779 19.0794 11.5038C19.1414 11.3808 19.2035 11.2579 19.2674 11.1312C19.3224 11.0228 19.3775 10.9143 19.4342 10.8027C19.5695 10.5476 19.5695 10.5476 19.5519 10.2795C15.7161 10.2795 11.8802 10.2795 7.92812 10.2795ZM42.4121 11.7062C42.0318 12.46 41.6528 13.2145 41.2746 13.9694C41.146 14.2257 41.0171 14.482 40.8879 14.7381C40.7015 15.1076 40.5161 15.4777 40.331 15.8479C40.2737 15.961 40.2163 16.0741 40.1573 16.1907C39.314 17.8839 39.1636 19.3511 39.1677 21.231C39.1676 21.4218 39.1675 21.6126 39.1674 21.8034C39.1671 22.326 39.1676 22.8486 39.1682 23.3712C39.1688 23.9354 39.1686 24.4997 39.1685 25.0639C39.1684 26.0408 39.1689 27.0178 39.1696 27.9948C39.1706 29.4073 39.171 30.8198 39.1711 32.2324C39.1714 34.5242 39.1723 36.816 39.1735 39.1079C39.1747 41.3339 39.1756 43.56 39.1761 45.7861C39.1762 45.9233 39.1762 46.0606 39.1762 46.202C39.1764 46.8906 39.1766 47.5791 39.1767 48.2677C39.1781 53.9786 39.1804 59.6895 39.1832 65.4004C41.3569 65.4004 43.5305 65.4004 45.7701 65.4004C45.7759 59.5427 45.7805 53.6849 45.7832 47.8272C45.7836 47.1355 45.7839 46.4437 45.7842 45.752C45.7843 45.6143 45.7844 45.4766 45.7845 45.3347C45.7856 43.1056 45.7876 40.8765 45.79 38.6474C45.7924 36.3598 45.7938 34.0722 45.7944 31.7845C45.7947 30.3732 45.7958 28.9619 45.7979 27.5505C45.7993 26.5824 45.7997 25.6143 45.7994 24.6462C45.7992 24.0879 45.7995 23.5295 45.8008 22.9712C45.8021 22.4594 45.8022 21.9476 45.8013 21.4357C45.8012 21.2512 45.8015 21.0667 45.8023 20.8821C45.8078 19.5698 45.7903 18.2518 45.1974 17.0536C45.1046 16.8628 45.1046 16.8628 45.0099 16.668C44.9438 16.5366 44.8776 16.4053 44.8095 16.2699C44.7415 16.1314 44.6735 15.9929 44.6035 15.8502C44.3914 15.419 44.1768 14.9892 43.9619 14.5595C43.8224 14.2779 43.683 13.9962 43.5437 13.7145C43.2116 13.044 42.8773 12.3746 42.5412 11.7062C42.4986 11.7062 42.456 11.7062 42.4121 11.7062Z" fill="#1E1E1E"/>
+<path d="M0.00904327 47.2326L0.00369192 32.386C0.00373484 31.0604 0.00317122 29.7351 0.00178072 28.41C0.000602205 27.2796 0.000522268 26.149 0.00139848 25.0183L0.000634004 23.2944C-0.000389919 22.7639 -0.000109671 22.2336 0.00101624 21.7036C0.00120808 21.5163 0.00096251 21.3293 0.000251765 21.1424V21.1417C-0.0100069 18.2437 0.652216 16.0481 2.05211 13.6146C3.99776 10.188 4.74176 7.55696 4.46175 3.70161L4.46137 3.69626C4.41116 2.97005 4.33426 1.91728 5.18648 0.842456L5.29274 0.708672L5.42538 0.600498C5.70953 0.369392 6.04262 0.174733 6.46507 0.0817993C6.78799 0.0107617 7.11983 0.0191534 7.23987 0.0194942C7.36633 0.0184071 7.49296 0.0171743 7.62325 0.0160541H7.64542C7.78321 0.0168199 7.92101 0.0175592 8.06283 0.0183475C8.20862 0.0176626 8.35449 0.0171418 8.5047 0.0164363H9.75386L9.75424 0.0160541C10.1955 0.0166601 10.6372 0.0150951 11.0844 0.0137606C11.96 0.011521 12.8357 0.01117 13.7097 0.0118494L13.7085 1.5775L11.089 1.57941C10.6435 1.58074 10.1979 1.58232 9.75233 1.58171L8.51196 1.58209C8.35887 1.58281 8.21028 1.5833 8.06168 1.584L7.63663 1.58171C7.50545 1.58283 7.37789 1.58405 7.25057 1.58515L7.00326 1.58782C6.78368 1.59675 6.63324 1.63652 6.41347 1.81526L6.33396 1.92152C5.96237 2.45034 5.97839 2.93479 6.02358 3.58846C6.32992 7.80655 5.48355 10.7443 3.40945 14.3951L3.17819 14.8083C2.06295 16.8582 1.55727 18.7037 1.5659 21.1363C1.56663 21.3265 1.56687 21.5168 1.56667 21.707C1.56555 22.2351 1.56527 22.7633 1.56629 23.2914C1.56741 23.8674 1.56747 24.4435 1.56705 25.0195L1.56743 28.4084C1.56883 29.7343 1.56939 31.0601 1.56934 32.386L1.57164 39.4716C1.57346 41.7717 1.57475 44.072 1.5747 46.3722L1.57623 55.1235C1.57664 56.0512 1.57693 56.9789 1.57699 57.9066C1.57706 59.0475 1.57744 60.1886 1.57852 61.3296C1.57913 61.9115 1.58007 62.4937 1.58005 63.0756C1.5799 63.6156 1.57964 64.1556 1.58043 64.6956C1.58078 64.8915 1.58134 65.0875 1.58158 65.2835C1.58136 65.4687 1.581 65.6543 1.58081 65.8396C1.58124 66.0105 1.58154 66.1764 1.58196 66.3423C1.58224 66.7881 1.5874 67.0964 1.72797 67.5199C1.98661 67.8512 2.13393 68.0028 2.51806 68.0876L2.59833 68.1036C2.73942 68.1036 2.87651 68.1037 3.01345 68.1036L3.75193 68.1051C3.93358 68.1037 4.11536 68.1032 4.29701 68.1036C4.54751 68.1048 4.798 68.1054 5.04849 68.1055L5.80035 68.1044C6.34811 68.1021 6.89584 68.102 7.4436 68.1029C7.98013 68.1037 8.51669 68.1038 9.05321 68.1036L10.6628 68.1017C11.9232 68.0989 13.1836 68.0982 14.4439 68.0983C15.5657 68.0984 16.6874 68.098 17.8092 68.0971L38.689 68.0822C39.7739 68.0821 40.8589 68.0813 41.9438 68.0792C42.4972 68.0779 43.0508 68.0764 43.6042 68.0765C44.118 68.0768 44.6317 68.0769 45.1454 68.0753C45.3317 68.0746 45.5183 68.0739 45.7046 68.0734L46.234 68.075C46.3965 68.0741 46.5542 68.0731 46.7118 68.0723C47.023 68.0719 47.1008 68.0716 47.2558 68.0577L47.448 68.039C47.8167 67.6688 48.0425 67.3498 48.1273 66.8483L48.1422 66.7459C48.1421 66.5974 48.1419 66.4531 48.1418 66.309L48.1429 65.5315C48.1418 65.3405 48.1415 65.1495 48.1418 64.9585V63.3765C48.14 62.8001 48.1398 62.2236 48.1403 61.6472L48.1357 54.2769C48.1355 51.9127 48.1338 49.5485 48.1307 47.1844L48.125 38.9888C48.1249 38.8433 48.1246 38.7019 48.1246 38.5607V38.1341C48.1242 35.931 48.1227 33.7276 48.1211 31.5244C48.1206 30.7288 48.12 29.933 48.1196 29.1374C48.1191 27.863 48.1183 26.5885 48.1166 25.3142C48.1157 24.7308 48.1149 24.1473 48.1147 23.5639C48.1146 23.0236 48.1142 22.4831 48.1131 21.9428C48.1127 21.7455 48.1123 21.5481 48.112 21.3508C48.1135 19.0436 47.8651 17.2235 46.7252 15.2005C44.4166 11.1437 43.3038 7.99642 43.6738 3.22687C43.7186 2.72506 43.6971 2.38523 43.4513 1.96662L43.3993 1.88177C42.9748 1.57495 42.9747 1.57498 42.039 1.56565C41.8948 1.56694 41.7546 1.56823 41.6147 1.56948L40.8987 1.5668C40.66 1.56636 40.4212 1.56633 40.1824 1.56718C39.7416 1.56916 39.3007 1.56905 38.8599 1.56795L38.8641 0.00229344C39.3031 0.0033958 39.7399 0.00348331 40.1755 0.00152896H40.1771C40.6559 -0.0001746 41.1332 0.00155598 41.607 0.0038224C41.7449 0.00259529 41.8828 0.00126422 42.0248 0H42.0542C42.2772 0.00222298 42.4843 0.00428715 42.6555 0.0118494C42.826 0.0193793 43.0399 0.0347935 43.2652 0.0871506C43.6618 0.179316 43.9621 0.361858 44.1569 0.497676L44.5564 0.786267L44.7165 1.03549C44.9579 1.41124 45.1268 1.80579 45.2062 2.25101C45.2793 2.66108 45.2614 3.04009 45.2345 3.34765L45.2349 3.34804C44.8966 7.70815 45.8752 10.5412 48.086 14.4261L48.0875 14.4292L48.0894 14.4318C49.4122 16.7794 49.679 18.901 49.6776 21.3481C49.678 21.5452 49.6783 21.7423 49.6788 21.9394V21.9402C49.6798 22.4817 49.6802 23.0229 49.6803 23.5632L49.6822 25.3119C49.684 26.587 49.6847 27.8625 49.6853 29.137C49.6856 29.9323 49.6862 30.7277 49.6868 31.5233C49.6884 33.7266 49.6898 35.9302 49.6902 38.1337C49.6903 38.2733 49.6902 38.4169 49.6902 38.5607C49.6903 38.6913 49.6906 38.8536 49.6906 38.9884L49.7013 54.2769C49.7014 55.6038 49.702 56.9302 49.7044 58.2564C49.7064 59.387 49.707 60.5178 49.7059 61.6487C49.7054 62.2241 49.7056 62.7981 49.7074 63.3715C49.7091 63.9023 49.709 64.433 49.7074 64.9631L49.7086 65.5224C49.7101 65.7909 49.7088 66.0584 49.7074 66.317C49.7075 66.4493 49.7078 66.6095 49.7078 66.7448V66.843L49.6956 66.9405C49.5666 67.9699 49.0903 68.6088 48.5577 69.1437L48.1632 69.5397L47.607 69.5963C47.4589 69.6114 47.3312 69.6252 47.1862 69.6318C47.0527 69.6379 46.9088 69.6373 46.7199 69.6375C46.5569 69.6384 46.4102 69.6393 46.2424 69.6402L46.2367 69.6406H46.2306C46.0553 69.6402 45.88 69.6395 45.7046 69.6391C45.5203 69.6395 45.3359 69.6403 45.1515 69.641H45.1504C44.6337 69.6426 44.1177 69.6421 43.6038 69.6417C43.0527 69.6417 42.5015 69.6436 41.9472 69.6448C40.8609 69.647 39.7744 69.6477 38.689 69.6479C37.808 69.648 36.927 69.6486 36.0458 69.6494C33.548 69.6517 31.0499 69.6526 28.552 69.6525H27.7352C25.5495 69.6523 23.3635 69.6549 21.1771 69.6586C18.9329 69.6623 16.6882 69.6641 14.4439 69.6639C13.1842 69.6638 11.925 69.6646 10.6663 69.6674C9.59149 69.6697 8.51624 69.6703 7.44093 69.6685C6.89467 69.6677 6.35005 69.6674 5.80647 69.6697C5.30107 69.6717 4.79614 69.6716 4.29165 69.6693C4.11575 69.6689 3.94004 69.6694 3.76455 69.6708H3.7634C3.50822 69.6727 3.25524 69.6707 3.01345 69.6689L3.01383 69.6693H2.45652L2.31624 69.6437C1.95003 69.5766 1.5606 69.4545 1.18634 69.1857C0.855176 68.9479 0.626821 68.6541 0.493723 68.4836L0.327067 68.2703L0.241827 68.0134C0.0167069 67.3352 0.0165966 66.8099 0.0163058 66.3465L0.0151591 65.8434V65.8377C0.0153479 65.6536 0.0157115 65.4695 0.0159236 65.2854C0.0156829 65.0897 0.0151247 64.8939 0.0147769 64.6982C0.0139823 64.1568 0.0142426 63.615 0.0143946 63.0749C0.0144204 62.4942 0.0134789 61.9136 0.0128657 61.3315C0.0117908 60.1899 0.0114087 59.0481 0.0113367 57.907C0.0112754 56.9795 0.0109819 56.0519 0.0105722 55.1243C0.00943401 52.4938 0.00894651 49.8631 0.00904327 47.2326Z" fill="#F0B953"/>`;
+function dashRawIcon(markup, vbW, vbH, maxDim) {
+  const scale = maxDim / Math.max(vbW, vbH);
+  const w = Math.round(vbW * scale), h = Math.round(vbH * scale);
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${vbW} ${vbH}">${markup}</svg>`;
+}
+function dashIconPcp(W) { return dashRawIcon(DASH_PCP_ICON_MARKUP, 179, 110, W); }
+function dashIconCafe(W) { return dashRawIcon(DASH_CAFE_ICON_MARKUP, 50, 70, W); }
 
 // ═══════════════════════════════════════════════
 // Botones — assets reales de Figma (carpeta "mare rosso" compartida por el usuario).
@@ -1082,6 +1273,310 @@ function initPager() {
   pager.addEventListener('pointercancel', endDrag);
 }
 
+// PROTOTIPO: pestaña del dashboard que se arrastra hacia arriba para revelar la
+// pantalla del cubo 3D, y el tirador propio de esa pantalla para volver a cerrarla.
+let cubeSheetOpen = false;
+function initCubeSheet() {
+  const sheet = document.getElementById('cube-sheet');
+  const pullTab = document.getElementById('cube-pull-tab');
+  const closeHandle = document.getElementById('cube-sheet-handle');
+  const DRAG_THRESHOLD = 70;
+  let startY = null, dy = 0, dragging = false;
+
+  function bindDrag(handleEl) {
+    handleEl.addEventListener('pointerdown', e => {
+      startY = e.clientY; dy = 0; dragging = true;
+      sheet.classList.add('no-anim');
+      handleEl.setPointerCapture(e.pointerId);
+    });
+    handleEl.addEventListener('pointermove', e => {
+      if (!dragging) return;
+      dy = e.clientY - startY;
+      const basePct = cubeSheetOpen ? 0 : 100;
+      const pct = Math.min(100, Math.max(0, basePct + (dy / window.innerHeight) * 100));
+      sheet.style.transform = `translateY(${pct}%)`;
+    });
+    const endDrag = () => {
+      if (!dragging) return;
+      dragging = false;
+      sheet.classList.remove('no-anim');
+      const wasOpen = cubeSheetOpen;
+      cubeSheetOpen = cubeSheetOpen ? !(dy > DRAG_THRESHOLD) : dy < -DRAG_THRESHOLD;
+      sheet.style.transform = cubeSheetOpen ? 'translateY(0)' : 'translateY(100%)';
+      // Siempre arranca desde el mismo ángulo/zoom al abrir — si no, queda como la
+      // dejó el último arrastre, aunque se haya cerrado y vuelto a abrir después.
+      if (cubeSheetOpen && !wasOpen) resetCubeView();
+    };
+    handleEl.addEventListener('pointerup', endDrag);
+    handleEl.addEventListener('pointercancel', endDrag);
+  }
+  bindDrag(pullTab);
+  bindDrag(closeHandle);
+}
+
+// Modelo 3D real (OBJ+MTL exportado de Fusion 360, con las 13 cajas como cuerpos
+// nombrados) en vez del cubo de prueba. Misma interacción de arrastrar-para-rotar
+// que el prototipo anterior, ahora aplicada al mesh de three.js.
+let TRUCK_CRATES = {}; // nombre de cuerpo -> Object3D, llenado una vez carga el modelo
+const DEFAULT_CUBE_ROT = { x: 0.3, y: Math.PI - 0.6 };
+const DEFAULT_CUBE_DIST = 5;
+let resetCubeView = () => {}; // se asigna de verdad dentro de initCubeRotate, una vez que existen pivot/camera
+function initCubeRotate() {
+  const container = document.getElementById('cube-scene');
+
+  const scene3d = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+  camera.position.set(0, 0, 5);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  container.appendChild(renderer.domElement);
+
+  scene3d.add(new THREE.AmbientLight(0xffffff, 0.7));
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  dirLight.position.set(3, 5, 4);
+  scene3d.add(dirLight);
+  const fillLight = new THREE.DirectionalLight(0xffffff, 0.35);
+  fillLight.position.set(-4, -2, -3);
+  scene3d.add(fillLight);
+
+  // El pivot es lo único que gira con el dedo; el modelo adentro lleva una corrección
+  // fija de eje (Fusion exporta con Z como "arriba", three.js espera Y como "arriba"),
+  // así que no se mezcla con la rotación del usuario.
+  const pivot = new THREE.Group();
+  let rotX = DEFAULT_CUBE_ROT.x, rotY = DEFAULT_CUBE_ROT.y;
+  pivot.rotation.set(rotX, rotY, 0);
+  scene3d.add(pivot);
+
+  const mtlLoader = new THREE.MTLLoader();
+  mtlLoader.setPath('assets/');
+  mtlLoader.load('dino_log.mtl', materials => {
+    materials.preload();
+    const objLoader = new THREE.OBJLoader();
+    objLoader.setMaterials(materials);
+    objLoader.setPath('assets/');
+    objLoader.load('dino_log.obj', obj => {
+      obj.rotation.x = -Math.PI / 2; // Z-up (CAD) -> Y-up (three.js)
+      obj.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(obj);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      obj.position.sub(center);
+      // Centrar en el punto medio del bbox deja el centro visual/de rotación más
+      // sobre la cabina que sobre la caja de carga — se corrige con un offset fijo,
+      // calibrado a ojo, para que quede sobre las cajas en vez de sobre el asiento.
+      obj.position.x += 0.136;
+      obj.position.y += 0.34;
+      const maxDim = Math.max(size.x, size.y, size.z) || 1;
+      pivot.scale.setScalar(2.4 / maxDim);
+      pivot.add(obj);
+
+      // Las 13 cajas, identificadas por el nombre de cuerpo que vino de Fusion
+      // (crate_bed_1..10, crate_backseat_left/right, crate_copilot) — expuestas
+      // globalmente para que la lógica de carga/descarga pueda referenciarlas por nombre.
+      TRUCK_CRATES = {};
+      obj.traverse(child => {
+        if (child.name && child.name.indexOf('crate_') === 0) TRUCK_CRATES[child.name] = child;
+      });
+      console.log('TRUCK_CRATES', Object.keys(TRUCK_CRATES));
+
+      // La cabina siempre tiene el mismo contenido (regla fija, no depende del día),
+      // así que esos 3 colores se pintan apenas carga el modelo. Las 10 cajas de la
+      // caja de carga se pintan recién cuando "Cargar Dino" calcule qué va en cada una.
+      setCrateSku('crate_copilot', 'gcp');
+      setCrateSku('crate_backseat_left', 'pcp');
+      setCrateSku('crate_backseat_right', 'pcp');
+
+      // Arreglo de apariencias del modelo, confirmado tocando cada pieza directo en
+      // la escena (no por nombre a ciegas):
+      //  1) Las guardabarros de un lado quedaron con la apariencia clara en vez de
+      //     la oscura del otro lado — Body2:2 (trasera) y Body4:1 (delantera) pasan
+      //     al mismo tono que ya tienen Body3 (trasera) y Body1:7 (delantera).
+      //  2) Todo lo que use la apariencia "Paint - Metallic (Silver)" (capó/bonnet,
+      //     las 2 puertas, la caja/bed, etc. — detectado por el color real que trae
+      //     cada pieza, no adivinado por nombre) pasa a la misma apariencia que ya
+      //     tiene el paragolpes trasero ("Steel - Satin"). Las guardabarros quedan
+      //     afuera de este paso porque ya se resolvieron en el paso 1.
+      const SILVER_PAINT_HEX = 0xd1d1d1;
+      const BUMPER_HEX = 0xa0a0a0; // "Steel - Satin", el mismo que ya tiene "bumper"
+      const DARK_FENDER_HEX = 0x3f3f3f;
+
+      ['Body2:2', 'Body4:1'].forEach(name => {
+        obj.traverse(n => {
+          if (n.isMesh && n.name === name && n.material && n.material.color) {
+            n.material = n.material.clone();
+            n.material.color.setHex(DARK_FENDER_HEX);
+          }
+        });
+      });
+
+      function recolorMatchingSlots(root, matchHex, newHex, excludeNames) {
+        root.traverse(n => {
+          if (!n.isMesh || !n.material) return;
+          if (excludeNames.has(n.name)) return;
+          const isArr = Array.isArray(n.material);
+          const mats = isArr ? n.material : [n.material];
+          let changed = false;
+          const next = mats.map(m => {
+            if (m.color && m.color.getHex() === matchHex) {
+              const c = m.clone();
+              c.color.setHex(newHex);
+              changed = true;
+              return c;
+            }
+            return m;
+          });
+          if (changed) n.material = isArr ? next : next[0];
+        });
+      }
+      recolorMatchingSlots(obj, SILVER_PAINT_HEX, BUMPER_HEX, new Set(['Body2:2', 'Body4:1']));
+    });
+  });
+
+  function resize() {
+    const w = container.clientWidth, h = container.clientHeight;
+    if (!w || !h) return;
+    renderer.setSize(w, h);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Arrastrar con 1 dedo rota; con 2 dedos hace zoom (acerca/aleja la cámara) en vez de
+  // dejar que el navegador interprete el pellizco como zoom de página — por eso cada
+  // evento de puntero se trackea individualmente y se llama preventDefault siempre,
+  // así el gesto nunca "se escapa" hacia el resto de la UI.
+  const pointers = new Map();
+  let dragging = false, lastX = 0, lastY = 0;
+  let pinchDist = 0;
+  let camDist = DEFAULT_CUBE_DIST;
+  const dist2 = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+  resetCubeView = () => {
+    rotX = DEFAULT_CUBE_ROT.x; rotY = DEFAULT_CUBE_ROT.y;
+    pivot.rotation.set(rotX, rotY, 0);
+    camDist = DEFAULT_CUBE_DIST;
+    camera.position.z = camDist;
+  };
+
+  // Un toque corto (sin arrastre, sin pellizco) raycastea contra el modelo para
+  // mostrar qué SKU tiene esa caja — se distingue del arrastre/zoom por el movimiento.
+  // Tocar la misma caja de nuevo, o cualquier parte en blanco (de la escena 3D o del
+  // resto de la pantalla), la deselecciona.
+  let downX = 0, downY = 0, gestureHadPinch = false;
+  let selectedCrateName = null;
+  const raycaster = new THREE.Raycaster();
+
+  function selectCrate(name) {
+    if (selectedCrateName === name) { deselectCrate(); return; }
+    if (selectedCrateName) setCrateHighlight(TRUCK_CRATES[selectedCrateName], false);
+    selectedCrateName = name;
+    setCrateHighlight(TRUCK_CRATES[name], true);
+    showCrateInfo(name);
+  }
+  function deselectCrate() {
+    if (!selectedCrateName) return;
+    setCrateHighlight(TRUCK_CRATES[selectedCrateName], false);
+    selectedCrateName = null;
+    showCrateInfo(null);
+  }
+
+  function handleCrateTap(clientX, clientY) {
+    const rect = container.getBoundingClientRect();
+    const ndc = new THREE.Vector2(
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -((clientY - rect.top) / rect.height) * 2 + 1
+    );
+    raycaster.setFromCamera(ndc, camera);
+    const hits = raycaster.intersectObject(pivot, true);
+    if (!hits.length) { deselectCrate(); return; }
+    let obj = hits[0].object;
+    while (obj && obj !== pivot) {
+      if (obj.name && TRUCK_CRATES[obj.name] === obj) { selectCrate(obj.name); return; }
+      obj = obj.parent;
+    }
+    deselectCrate(); // tocó el vehículo pero no una de las 13 cajas (ej. la carrocería)
+  }
+  // Tocar cualquier parte en blanco de la pantalla (fuera de la escena 3D, donde el
+  // toque corto ya se maneja arriba) también deselecciona.
+  document.getElementById('cube-sheet').addEventListener('click', e => {
+    if (!container.contains(e.target)) deselectCrate();
+  });
+
+  container.addEventListener('pointerdown', e => {
+    container.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 1) {
+      dragging = true; lastX = e.clientX; lastY = e.clientY;
+      downX = e.clientX; downY = e.clientY; gestureHadPinch = false;
+    } else if (pointers.size === 2) {
+      dragging = false;
+      gestureHadPinch = true;
+      pinchDist = dist2(...pointers.values());
+    }
+  });
+  container.addEventListener('pointermove', e => {
+    if (!pointers.has(e.pointerId)) return;
+    e.preventDefault();
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 2) {
+      const d = dist2(...pointers.values());
+      if (pinchDist > 0) {
+        camDist = Math.min(12, Math.max(1.5, camDist - (d - pinchDist) * 0.02));
+        camera.position.z = camDist;
+      }
+      pinchDist = d;
+      return;
+    }
+    if (!dragging) return;
+    const dx = e.clientX - lastX, dyMove = e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    rotY += dx * 0.008;
+    rotX += dyMove * 0.008;
+    pivot.rotation.set(rotX, rotY, 0);
+  }, { passive: false });
+  const stop = e => {
+    const isTap = pointers.size === 1 && !gestureHadPinch && dist2({ x: e.clientX, y: e.clientY }, { x: downX, y: downY }) < 6;
+    pointers.delete(e.pointerId);
+    if (pointers.size < 2) pinchDist = 0;
+    if (pointers.size === 0) dragging = false;
+    if (isTap) handleCrateTap(e.clientX, e.clientY);
+  };
+  container.addEventListener('pointerup', stop);
+  container.addEventListener('pointercancel', stop);
+  // Pellizco en trackpad / rueda con ctrl en desktop — mismo manejo de zoom por cámara.
+  container.addEventListener('wheel', e => {
+    e.preventDefault();
+    camDist = Math.min(12, Math.max(1.5, camDist + e.deltaY * 0.01));
+    camera.position.z = camDist;
+  }, { passive: false });
+
+  (function animate() {
+    requestAnimationFrame(animate);
+    renderer.render(scene3d, camera);
+  })();
+}
+
+// Colores planos por tipo de SKU para distinguir a simple vista qué lleva cada caja
+// (las cajas de Fusion no traen un color por SKU, son todas el mismo naranja de appearance).
+const CRATE_SKU_COLORS = { gsp: 0xF09C53, gcp: 0xD9813A, pcp: 0x4F7CA8, mixed: 0xE8C547 };
+function setCrateSku(crateName, skuKey) {
+  const crate = TRUCK_CRATES[crateName];
+  const color = CRATE_SKU_COLORS[skuKey];
+  if (!crate || color === undefined) return;
+  crate.traverse(n => {
+    if (n.material) {
+      if (!n.__skuColored) {
+        n.material = n.material.clone();
+        n.__origColor = n.material.color.clone();
+        n.__skuColored = true;
+      }
+      n.material.color.setHex(color);
+    }
+  });
+}
+
 // Animación de "bounce" al presionar un ícono (ver @keyframes icon-press-bounce) — se
 // remueve y re-agrega la clase forzando un reflow, para que funcione aunque se taquee
 // el botón varias veces seguidas antes de que termine la animación anterior.
@@ -1097,6 +1592,15 @@ function toast(msg) {
   el.classList.add('show');
   setTimeout(() => el.classList.remove('show'), 1800);
 }
+
+// Para mensajes que el usuario necesita poder releer con calma (ej. el resultado de
+// "Cargar Dino") — se queda en pantalla hasta que lo cierran con la X, a diferencia
+// de toast() que se esconde solo.
+function stickyBanner(msg) {
+  document.getElementById('sticky-banner-text').textContent = msg;
+  document.getElementById('sticky-banner').classList.add('show');
+}
+function closeStickyBanner() { document.getElementById('sticky-banner').classList.remove('show'); }
 
 // ═══════════════════════════════════════════════
 // Selection
@@ -1312,18 +1816,71 @@ const DASH_PILLS = [
   { key: 'total', label: 'Total' }, { key: 'lunes', label: 'Lun' }, { key: 'martes', label: 'Mar' },
   { key: 'miercoles', label: 'Mié' }, { key: 'pickup', label: 'Pickup' }
 ];
-let dashDay = 'total';
+let dashDay = dashDefaultDay();
+let dashWeekOffset = 0; // navegación de semana en el dashboard, independiente de la ruta en vivo (siempre semana actual)
+// Capacidad del vehículo en "cartones" (cartón grande = 1, chico = 0.5) — 13 cajas x 10 c/u.
+const VEHICLE_CAPACITY_CARTONES = 130;
+let refillBoundaryClientId = null; // último cliente antes del punto de refill, fijado a mano con "Setear refill"
+let dashRenderToken = 0;
+const DASH_PEDIDOS_CACHE = {}; // week_key -> pedidos[], para no re-pedir semanas ya vistas
+
+// Mismo cálculo de lunes–domingo que getWeekDates(), pero exponiendo el rango y el año
+// por separado para el encabezado (fecha en negro, año en gris, como en el CRM original).
+const DASH_MESES_ABR = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+function getDashWeekLabel(offset) {
+  const now = new Date();
+  const day = now.getDay();
+  const adjustedOffset = (day === 0) ? offset + 1 : offset;
+  const daysToMonday = (day === 0) ? -6 : 1 - day;
+  const mon = new Date(now); mon.setDate(now.getDate() + daysToMonday + adjustedOffset * 7);
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+  const fmt = d => `${String(d.getDate()).padStart(2, '0')} ${DASH_MESES_ABR[d.getMonth()]}`;
+  return {
+    range: `${fmt(mon)} – ${fmt(sun)}`,
+    year: `'${String(sun.getFullYear()).slice(-2)}`
+  };
+}
+
+function shiftDashWeek(delta) {
+  if (delta > 0 && dashWeekOffset >= 0) return; // no viajamos al futuro
+  dashWeekOffset += delta;
+  renderDashboard();
+}
+
+async function getDashPedidosForWeek(weekKey) {
+  if (weekKey === wk.key) return PEDIDOS; // la semana en vivo ya está cargada en memoria
+  if (DASH_PEDIDOS_CACHE[weekKey]) return DASH_PEDIDOS_CACHE[weekKey];
+  const rows = await sbGet('pedidos', `week_key=eq.${weekKey}&select=*`);
+  DASH_PEDIDOS_CACHE[weekKey] = rows;
+  return rows;
+}
+
+// Variante de buildStops() parametrizada por semana — no toca PEDIDOS/CONFIRMACIONES
+// "en vivo" de la ruta actual, para que navegar el dashboard nunca afecte la ruta de hoy.
+function buildDashStopsForWeek(dia, weekKey, pedidosForWeek) {
+  const confirmed = CLIENTES.filter(c => {
+    if (c.estado !== 'activo' || c.ruta !== dia) return false;
+    const conf = CONFIRMACIONES[`${weekKey}_${c.id}`] || null;
+    return conf && (conf.estado === 'confirmado' || conf.estado === 'cambio');
+  });
+  return confirmed.map(c => {
+    const conf = CONFIRMACIONES[`${weekKey}_${c.id}`] || null;
+    const pedido = pedidosForWeek.find(p => p.id === c.id);
+    const parts = productBreakdown(c, conf);
+    return { cliente: c, conf, pedido, parts, entregado: pedido ? !!pedido.entregado : false };
+  });
+}
 
 // Mismo origen de datos que el resto de la app (buildStops) — "ordenado" cuenta las
 // paradas CONFIRMADAS de la ruta (entregadas o no); las entregas flash (buildQuickStops)
 // quedan afuera a propósito, son ventas espontáneas fuera de lo pedido para la semana,
 // no cuentan para "lo que se pidió esta semana".
-function computeDashTotals(day) {
+function computeDashTotals(day, weekKey, pedidosForWeek) {
   const days = day === 'total' ? DASH_DAYS : [day];
   const ordered = { gsp: 0, gcp: 0, pcp: 0, cafe: 0 };
   const delivered = { gsp: 0, gcp: 0, pcp: 0, cafe: 0 };
   days.forEach(d => {
-    buildStops(d).forEach(s => {
+    buildDashStopsForWeek(d, weekKey, pedidosForWeek).forEach(s => {
       const nota = s.conf && s.conf.nota;
       withCafeIfNoted(s.parts, nota).forEach(p => {
         if (ordered[p.k] === undefined) return;
@@ -1342,10 +1899,25 @@ function computeDashTotals(day) {
 
 function setDashDay(day) { dashDay = day; renderDashboard(); }
 
-function renderDashboard() {
+async function renderDashboard() {
   const pillsEl = document.getElementById('dash-pills');
   if (!pillsEl) return; // la pantalla 2 todavía no está en el DOM
-  const { remaining, totalCartones } = computeDashTotals(dashDay);
+  const myToken = ++dashRenderToken;
+
+  const weekKey = getWeekDates(dashWeekOffset).key;
+  const { range, year } = getDashWeekLabel(dashWeekOffset);
+  document.getElementById('dash-week-range').textContent = range;
+  document.getElementById('dash-week-year').textContent = year;
+  document.getElementById('dash-week-prev').innerHTML = iconChevron(52);
+  document.getElementById('dash-week-next').innerHTML = iconChevron(52);
+  document.getElementById('dash-week-next').disabled = (dashWeekOffset >= 0);
+
+  let pedidosForWeek;
+  try { pedidosForWeek = await getDashPedidosForWeek(weekKey); }
+  catch (e) { console.error(e); pedidosForWeek = []; }
+  if (myToken !== dashRenderToken) return; // se adelantó otro cambio de semana/día mientras esperábamos
+
+  const { remaining, totalCartones } = computeDashTotals(dashDay, weekKey, pedidosForWeek);
 
   pillsEl.innerHTML = DASH_PILLS.map(p =>
     `<button class="dash-pill ${p.key === dashDay ? 'active' : ''}" onclick="setDashDay('${p.key}')">${p.label}</button>`
@@ -1356,14 +1928,499 @@ function renderDashboard() {
 
   document.getElementById('dash-grid').innerHTML = `
     <div class="dash-row dash-row-1">
-      <div class="dash-tile dash-dark"><div class="dash-num">${remaining.gsp}</div><div class="dash-icon">${skuIcon('gsp', 100)}</div></div>
-      <div class="dash-tile dash-light"><div class="dash-num">${remaining.gcp}</div><div class="dash-icon">${skuIcon('gcp', 100)}</div></div>
+      <div class="dash-tile dash-dark"><div class="dash-num">${remaining.gsp}</div><div class="dash-icon">${skuIcon('gsp', 72)}</div></div>
+      <div class="dash-tile dash-light"><div class="dash-num">${remaining.gcp}</div><div class="dash-icon">${skuIcon('gcp', 72)}</div></div>
     </div>
     <div class="dash-row dash-row-2">
-      <div class="dash-tile dash-light"><div class="dash-num">${remaining.pcp}</div><div class="dash-icon">${skuIcon('pcp', 100)}</div></div>
-      <div class="dash-tile dash-gold"><div class="dash-num">${remaining.cafe}</div><div class="dash-icon">${skuIcon('cafe', 100)}</div></div>
+      <div class="dash-tile dash-light"><div class="dash-num">${remaining.pcp}</div><div class="dash-icon">${dashIconPcp(72)}</div></div>
+      <div class="dash-tile dash-gold"><div class="dash-num">${remaining.cafe}</div><div class="dash-icon">${dashIconCafe(55)}</div></div>
     </div>
   `;
+
+  // "Refill" es independiente de qué semana/día se esté mirando en el dashboard —
+  // es una alerta operativa sobre el día real de hoy, usando los datos en vivo
+  // (comparte el mismo TEST_CARGA_WEEK_OFFSET que "Cargar Dino" para poder probar
+  // ambos contra la misma semana de prueba cuando haga falta).
+  const banner = document.getElementById('dash-refill-banner');
+  if (banner) {
+    const refillWeekKey = TEST_CARGA_WEEK_OFFSET === null ? wk.key : getWeekDates(TEST_CARGA_WEEK_OFFSET).key;
+    const refillPedidos = TEST_CARGA_WEEK_OFFSET === null ? PEDIDOS : await getDashPedidosForWeek(refillWeekKey);
+    const { totalCartones: todayTotal } = computeDashTotals(todayDefaultDay(), refillWeekKey, refillPedidos);
+    const needsRefill = todayTotal > VEHICLE_CAPACITY_CARTONES;
+    banner.style.display = needsRefill ? 'flex' : 'none';
+    const boundaryEl = document.getElementById('dash-refill-boundary');
+    if (needsRefill && boundaryEl) {
+      const boundaryClient = CLIENTES.find(c => c.id === refillBoundaryClientId);
+      boundaryEl.textContent = boundaryClient
+        ? `Último antes del refill: ${boundaryClient.nombre}`
+        : 'Todavía no se fijó el punto de refill.';
+    }
+  }
+}
+
+// "Setear refill" — el repartidor elige, de la lista de paradas de hoy en su orden
+// actual (confirmado), cuál es la última entrega antes de volver a cargar el camión.
+async function openRefillPicker() {
+  const stops = await getCargaDinoStops(todayDefaultDay());
+  document.getElementById('refill-picker-list').innerHTML = stops.map((s, i) => `
+    <div class="parada-row ${s.cliente.id === refillBoundaryClientId ? 'selected' : ''}" onclick="setRefillBoundary(${s.cliente.id})">
+      <div class="idx">${i + 1}</div>
+      <div class="info">
+        <div class="name">${s.cliente.nombre}</div>
+        <div class="addr">${s.cliente.zona || ''}</div>
+      </div>
+    </div>`).join('');
+  const closeBtn = document.getElementById('refill-picker-close-btn');
+  if (closeBtn && !closeBtn.innerHTML) closeBtn.innerHTML = iconCancel(40);
+  document.getElementById('refill-picker-overlay').classList.add('show');
+}
+function closeRefillPicker() { document.getElementById('refill-picker-overlay').classList.remove('show'); }
+function setRefillBoundary(clienteId) {
+  refillBoundaryClientId = clienteId;
+  closeRefillPicker();
+  const c = CLIENTES.find(x => x.id === clienteId);
+  toast(`Punto de refill: ${c ? c.nombre : clienteId}`);
+  renderDashboard();
+}
+
+// Simula el consumo de cajas para lo que resta del día (recalculado de cero cada vez
+// que se aprieta el botón — es una recomendación de planificación, no un inventario
+// físico en vivo: las cajas de cabina arrancan llenas en cada corrida).
+// Reglas aplicadas (confirmadas con Juani):
+//  - G-SP (sin plástico) nunca vive en cabina: siempre sale de la caja de carga.
+//  - G-CP (con plástico) vive fijo en el copiloto. Si hace falta una caja ENTERA (10)
+//    y todavía no se abrió ninguna caja de G-CP en la caja de carga (o la última ya
+//    se cerró llena), se saca directo de una caja nueva de atrás sin tocar el copiloto.
+//    Si no (pedido chico, o la de atrás ya está empezada/parcial), se usa el copiloto;
+//    cuando el copiloto se vacía del todo, la siguiente caja de G-CP de atrás pasa a
+//    hacer de copiloto para lo que sigue — ej: quedan 1, hace falta 2 → se toma el 1
+//    que quedaba, se trae la caja nueva, y de esa se toma el otro 1, quedando 9.
+//  - P-CP (chico con plástico) funciona igual, pero contra el pool de los 2 asientos
+//    traseros en vez del copiloto.
+// Las cajas de la caja de carga quedan numeradas en el orden en que se van abriendo
+// durante la simulación — ese orden es exactamente crate_bed_1..10.
+const CRATE_CARTONES = 10; // tamaño de una caja en "cartones" (grande=1, chico=0.5 → 20 chicos)
+function capacityOf(sku) { return sku === 'pcp' ? CRATE_CARTONES * 2 : CRATE_CARTONES; }
+function equivOf(sku, qty) { return sku === 'pcp' ? qty * 0.5 : qty; }
+
+function computeLoadPlan(stops) {
+  let copilotLeft = CRATE_CARTONES;           // 1 caja de 10 (copiloto)
+  let backseatLeft = CRATE_CARTONES * 2 * 2;  // 2 cajas de 20 chicos, agrupadas (= 40)
+  const bedCrates = []; // en orden de apertura — una sola secuencia por SKU, nunca dos en paralelo
+
+  function openBedCrate(sku, capacity) {
+    const crate = { sku, used: 0, capacity };
+    bedCrates.push(crate);
+    return crate;
+  }
+  function lastOpenCrate(sku) {
+    const of_ = bedCrates.filter(c => c.sku === sku);
+    return of_.length ? of_[of_.length - 1] : null;
+  }
+  // Única función que toca la caja de carga: si la última caja abierta de esa SKU
+  // todavía tiene lugar la sigue llenando, si no abre una nueva — tanto un pedido
+  // grande servido directo desde atrás como un relleno de cabina pasan por acá, así
+  // nunca quedan dos cajas parciales de la misma SKU abiertas al mismo tiempo.
+  function consumeFromBed(sku, capacity, amount) {
+    let crate = lastOpenCrate(sku);
+    while (amount > 0) {
+      if (!crate || crate.used >= crate.capacity) crate = openBedCrate(sku, capacity);
+      const take = Math.min(amount, crate.capacity - crate.used);
+      crate.used += take;
+      amount -= take;
+    }
+  }
+  // Consume de la fuente accesible (copiloto o asiento trasero); si se vacía a mitad
+  // de un pedido, una caja entera de la caja de carga "se muda" a la cabina (regla 6) —
+  // siempre a través de consumeFromBed, para reusar cualquier caja ya empezada.
+  function consumeFromAccessible(sku, capacity, amount, getLeft, setLeft) {
+    let qty = amount;
+    while (qty > 0) {
+      if (getLeft() <= 0) {
+        consumeFromBed(sku, capacity, capacity);
+        setLeft(capacity);
+      }
+      const take = Math.min(qty, getLeft());
+      setLeft(getLeft() - take);
+      qty -= take;
+    }
+  }
+
+  // Cuántas cajas de la caja de carga llevan abiertas justo después de cada parada —
+  // así después se puede encontrar "hasta dónde llegó" el primer tramo (hasta el
+  // cliente del punto de refill) sin tener que simular ese tramo por separado.
+  const stopCrateCounts = [];
+
+  stops.forEach(s => {
+    const nota = s.conf && s.conf.nota;
+    const parts = withCafeIfNoted(s.parts, nota);
+    const need = { gsp: 0, gcp: 0, pcp: 0 };
+    parts.forEach(p => { if (need[p.k] !== undefined) need[p.k] += p.qty; });
+
+    if (need.gsp > 0) consumeFromBed('gsp', CRATE_CARTONES, need.gsp);
+
+    if (need.gcp > 0) {
+      const lastGcp = lastOpenCrate('gcp');
+      const bedHasPartial = !!(lastGcp && lastGcp.used < lastGcp.capacity);
+      // Caja llena directo de atrás solo si el pedido llena una caja entera, el
+      // copiloto sigue intacto y no hay ninguna caja de atrás ya empezada esperando.
+      if (need.gcp >= CRATE_CARTONES && copilotLeft === CRATE_CARTONES && !bedHasPartial) {
+        consumeFromBed('gcp', CRATE_CARTONES, need.gcp);
+      } else {
+        consumeFromAccessible('gcp', CRATE_CARTONES, need.gcp, () => copilotLeft, v => { copilotLeft = v; });
+      }
+    }
+
+    if (need.pcp > 0) {
+      consumeFromAccessible('pcp', CRATE_CARTONES * 2, need.pcp, () => backseatLeft, v => { backseatLeft = v; });
+    }
+
+    stopCrateCounts.push(bedCrates.length);
+  });
+
+  return { bedCrates, copilotLeft, backseatLeft, stopCrateCounts };
+}
+
+// Lógica de refill ("codename Monday"): si el día entero no entra en las 10 cajas de
+// la caja de carga pero se fijó un punto de refill, el primer tramo (hasta ese
+// cliente) va en las primeras posiciones y las últimas entregas del día — las que de
+// todas formas no se van a tocar hasta mucho más tarde — se precargan de una en las
+// últimas posiciones. Lo que queda en el medio ("cajas del medio") no entra en el
+// viaje de salida: se trae recién en el refill, así que no se le asigna posición acá.
+function splitForRefill(stops, raw, stopCrateCounts) {
+  const boundaryIdx = stops.findIndex(s => s.cliente.id === refillBoundaryClientId);
+  if (boundaryIdx === -1) return null;
+  const K = stopCrateCounts[boundaryIdx];
+  const R = 10 - K;
+  if (R < 0) return { impossible: true };
+  const front = raw.slice(0, K);
+  const back = R > 0 ? raw.slice(raw.length - R) : [];
+  const middle = raw.slice(K, raw.length - R);
+  return { front, back, middle };
+}
+
+// Rescate de capacidad: el simulador nunca deja más de 1 caja parcial abierta por SKU
+// a la vez, así que si al final del día el total se pasa de 10, lo más que puede haber
+// esperando son 3 parciales (una por G-SP/G-CP/P-CP) — cada una con lugar libre que de
+// otra forma queda desperdiciado. Si combinando esas parciales entran en menos cajas
+// físicas (capacidad = 10 "cartones equivalentes" por caja, grande=1, chico=0.5), se
+// combinan en una sola caja mixta. Las que no encuentran con qué combinarse quedan
+// solas (no son "mixtas" — un solo SKU no cuenta como mezcla).
+function tryMergePartials(bedCrates) {
+  const equiv = c => c.sku === 'pcp' ? c.used * 0.5 : c.used;
+  const full = bedCrates.filter(c => c.used >= c.capacity);
+  const partials = bedCrates.filter(c => c.used > 0 && c.used < c.capacity);
+  if (partials.length < 2) return bedCrates; // nada para combinar
+
+  const totalEquiv = partials.reduce((sum, c) => sum + equiv(c), 0);
+  if (totalEquiv <= 10) {
+    return full.concat([{ mixed: true, contents: partials.map(c => ({ sku: c.sku, qty: c.used })) }]);
+  }
+  // No entran todas juntas en una sola caja — combinar de a pares, lo que más
+  // aproveche el espacio, y dejar sin combinar la que no tenga con qué emparejarse.
+  const sorted = partials.slice().sort((a, b) => equiv(b) - equiv(a));
+  const used = new Array(sorted.length).fill(false);
+  const result = [];
+  for (let i = 0; i < sorted.length; i++) {
+    if (used[i]) continue;
+    let bestJ = -1, bestSum = -1;
+    for (let j = i + 1; j < sorted.length; j++) {
+      if (used[j]) continue;
+      const sum = equiv(sorted[i]) + equiv(sorted[j]);
+      if (sum <= 10 && sum > bestSum) { bestSum = sum; bestJ = j; }
+    }
+    if (bestJ >= 0) {
+      result.push({ mixed: true, contents: [
+        { sku: sorted[i].sku, qty: sorted[i].used },
+        { sku: sorted[bestJ].sku, qty: sorted[bestJ].used }
+      ] });
+      used[i] = true; used[bestJ] = true;
+    } else {
+      result.push(sorted[i]);
+      used[i] = true;
+    }
+  }
+  return full.concat(result);
+}
+
+// Arma la asignación final de las 13 cajas: cabina (copiloto, asiento trasero derecho e
+// izquierdo) + hasta 10 de la caja de carga. Las cajas parciales que el simulador deja
+// al final, si combinándolas se arma una caja mixta, van a la cabina en vez de sumar a
+// la caja de carga — el copiloto primero (el más accesible), después el asiento
+// trasero derecho, después el izquierdo — liberando lugar en la caja de carga en vez
+// de ocuparlo. Una parcial que quedó sola (no es mezcla) se queda en su lugar normal.
+function assignLoad(stops) {
+  const { bedCrates: raw, copilotLeft, backseatLeft, stopCrateCounts } = computeLoadPlan(stops);
+
+  // Si el día no entra en 10 cajas pero ya se fijó un punto de refill, el primer
+  // tramo + las últimas entregas del día (precargadas) reemplazan a la secuencia
+  // completa — lo que queda en el medio se trae recién en el refill, no se carga
+  // ahora. Si no se pudo (no se fijó el punto, no se encontró el cliente, o el
+  // primer tramo solo ya no entra), sigue el camino normal de abajo.
+  let bedBase = raw;
+  let middleCount = 0;
+  if (raw.length > 10 && refillBoundaryClientId != null) {
+    const split = splitForRefill(stops, raw, stopCrateCounts);
+    if (split && !split.impossible) {
+      bedBase = split.front.concat(split.back);
+      middleCount = split.middle.length;
+    }
+  }
+
+  const merged = bedBase.length > 10 ? tryMergePartials(bedBase) : bedBase;
+  const mixedCrates = merged.filter(c => c.mixed);
+  const singleCrates = merged.filter(c => !c.mixed);
+
+  // Lo que ya se gastó de cada asiento trasero, repartido asumiendo que el derecho se
+  // vacía primero (no hay forma de saber cuál específicamente, la simulación los
+  // agrupa) — simplificación para poder mostrar/usar cada caja física por separado.
+  const backseatUsedTotal = CRATE_CARTONES * 2 * 2 - backseatLeft;
+  const usedRight = Math.min(CRATE_CARTONES * 2, backseatUsedTotal);
+  const usedLeft = Math.max(0, backseatUsedTotal - CRATE_CARTONES * 2);
+
+  const cabin = {
+    copilot: { slot: 'copilot', sku: 'gcp', used: CRATE_CARTONES - copilotLeft, capacity: CRATE_CARTONES },
+    backseat_right: { slot: 'backseat_right', sku: 'pcp', used: usedRight, capacity: CRATE_CARTONES * 2 },
+    backseat_left: { slot: 'backseat_left', sku: 'pcp', used: usedLeft, capacity: CRATE_CARTONES * 2 },
+  };
+  const cabinOrder = ['copilot', 'backseat_right', 'backseat_left'];
+  mixedCrates.slice(0, 3).forEach((m, i) => {
+    cabin[cabinOrder[i]] = { slot: cabinOrder[i], mixed: true, contents: m.contents, capacity: CRATE_CARTONES };
+  });
+  // si hubiera más de 3 mezclas (no pasa sin Extras), las que sobran van a la caja de
+  // carga en vez de perderse.
+  const overflowMixed = mixedCrates.slice(3).map(m => ({ mixed: true, contents: m.contents, capacity: CRATE_CARTONES }));
+
+  const bed = singleCrates.concat(overflowMixed).map((c, i) => ({
+    slot: 'bed_' + (i + 1), sku: c.sku, mixed: c.mixed, contents: c.contents, used: c.used, capacity: c.capacity
+  }));
+
+  return { cabin, bed, overflow: bed.length > 10, middleCount };
+}
+
+function allLoadSlots(load) {
+  return [load.cabin.copilot, load.cabin.backseat_right, load.cabin.backseat_left].concat(load.bed);
+}
+function remainingEquiv(crate) {
+  if (crate.mixed) return CRATE_CARTONES - crate.contents.reduce((s, c) => s + equivOf(c.sku, c.qty), 0);
+  return CRATE_CARTONES - equivOf(crate.sku, crate.used);
+}
+
+// Qué hay HOY en una caja tocada en la pantalla 3D — mismo lenguaje visual (ícono +
+// cantidad) que las fichas del dashboard, mostrado en la franja arriba del vehículo.
+function loadSlotForCrateName(name) {
+  if (!CURRENT_LOAD) return null;
+  if (name === 'crate_copilot') return CURRENT_LOAD.cabin.copilot;
+  if (name === 'crate_backseat_right') return CURRENT_LOAD.cabin.backseat_right;
+  if (name === 'crate_backseat_left') return CURRENT_LOAD.cabin.backseat_left;
+  const m = /^crate_bed_(\d+)$/.exec(name);
+  if (m) return CURRENT_LOAD.bed[parseInt(m[1], 10) - 1] || null;
+  return null;
+}
+function crateInfoItemHTML(sku, qty) {
+  const icon = sku === 'pcp' ? dashIconPcp(132) : skuIcon(sku, 150);
+  const qtyFmt = Number.isInteger(qty) ? qty : qty.toFixed(1);
+  return `<div class="crate-info-item"><div class="crate-info-qty">${qtyFmt}</div>${icon}</div>`;
+}
+function showCrateInfo(crateName) {
+  const panel = document.getElementById('crate-info-panel');
+  if (!panel) return;
+  const slot = loadSlotForCrateName(crateName);
+  if (!slot) { panel.innerHTML = ''; return; }
+  panel.innerHTML = slot.mixed
+    ? slot.contents.map(c => crateInfoItemHTML(c.sku, c.qty)).join('')
+    : crateInfoItemHTML(slot.sku, slot.used);
+}
+
+function resetCrateSku(crateName) {
+  const crate = TRUCK_CRATES[crateName];
+  if (!crate) return;
+  crate.traverse(n => {
+    if (n.material && n.__skuColored && n.__origColor) {
+      n.material.color.copy(n.__origColor);
+    }
+  });
+}
+
+// Modo "activo" al tocar una caja — se agrega un brillo (emissive) parejo encima del
+// color que ya tenga, para que se note seleccionada sea cual sea su SKU/color.
+function setCrateHighlight(crateObj, on) {
+  if (!crateObj) return;
+  crateObj.traverse(n => {
+    if (!n.material) return;
+    if (!n.__skuColored) { // primer toque antes de "Cargar Dino" — clonar para no afectar otras cajas que compartan el material de Fusion
+      n.material = n.material.clone();
+      n.__origColor = n.material.color.clone();
+      n.__skuColored = true;
+    }
+    if (!n.material.emissive) return;
+    if (on) {
+      if (!n.__baseEmissive) n.__baseEmissive = n.material.emissive.clone();
+      n.material.emissive.setHex(0x666666);
+    } else if (n.__baseEmissive) {
+      n.material.emissive.copy(n.__baseEmissive);
+    }
+  });
+}
+
+const CABIN_SLOT_TO_CRATE = { copilot: 'crate_copilot', backseat_right: 'crate_backseat_right', backseat_left: 'crate_backseat_left' };
+function renderLoadColors(load) {
+  Object.keys(CABIN_SLOT_TO_CRATE).forEach(slot => {
+    const c = load.cabin[slot];
+    setCrateSku(CABIN_SLOT_TO_CRATE[slot], c.mixed ? 'mixed' : c.sku);
+  });
+  for (let i = 0; i < 10; i++) {
+    const name = 'crate_bed_' + (i + 1);
+    const c = load.bed[i];
+    if (c) setCrateSku(name, c.mixed ? 'mixed' : c.sku);
+    else resetCrateSku(name);
+  }
+  const panel = document.getElementById('crate-info-panel');
+  if (panel) panel.innerHTML = ''; // evita mostrar el contenido de una caja ya recalculada
+}
+
+// Semana de datos para "Cargar Dino"/Extras/refill: null = semana en vivo (de
+// producción). Se usó -1 (semana pasada) temporalmente para probar con volumen real
+// mientras la semana en vivo no tenía entregas pendientes — ya vuelto a null para producción.
+const TEST_CARGA_WEEK_OFFSET = null;
+async function getCargaDinoStops(day) {
+  if (TEST_CARGA_WEEK_OFFSET === null) return buildStops(day).filter(s => !s.entregado);
+  const weekKey = getWeekDates(TEST_CARGA_WEEK_OFFSET).key;
+  const pedidos = await getDashPedidosForWeek(weekKey);
+  return buildDashStopsForWeek(day, weekKey, pedidos);
+}
+// ════════════════════════════════════════════════════════════════════════════════
+
+let CURRENT_LOAD = null; // última asignación calculada — null hasta que se corre "Cargar Dino"
+
+async function computeAndStoreLoad() {
+  const day = todayDefaultDay();
+  const stops = await getCargaDinoStops(day);
+  const load = assignLoad(stops);
+  if (!load.overflow) CURRENT_LOAD = load;
+  return load;
+}
+
+function cargarDinoKeyToday() { return new Date().toISOString().slice(0, 10); }
+function extrasAlreadyUsedToday() {
+  try { return localStorage.getItem('huevoruta_cargardino_day') === cargarDinoKeyToday(); }
+  catch (e) { return false; }
+}
+function setExtrasEnabled(enabled) {
+  const btn = document.getElementById('extras-btn');
+  if (btn) btn.disabled = !enabled;
+}
+function markCargarDinoUsedToday() {
+  try { localStorage.setItem('huevoruta_cargardino_day', cargarDinoKeyToday()); } catch (e) {}
+  setExtrasEnabled(true);
+}
+
+// "Cargar Dino" — calcula el mejor orden de carga de las 13 cajas para lo que queda
+// del día (las entregas ya hechas no cuentan).
+async function cargarDino() {
+  if (!TRUCK_CRATES.crate_bed_1) { toast('⚠️ El modelo 3D todavía está cargando'); return; }
+
+  const load = await computeAndStoreLoad();
+  if (load.overflow) {
+    toast('⚠️ Hoy hace falta refill — fijá el punto con "Setear refill" antes de cargar');
+    return;
+  }
+
+  renderLoadColors(load);
+  markCargarDinoUsedToday();
+  const mixedCount = allLoadSlots(load).filter(c => c.mixed).length;
+  stickyBanner(`✅ Orden de carga calculado — ${load.bed.length} caja(s) en la caja de carga` +
+    (mixedCount ? ` (${mixedCount} mixta${mixedCount === 1 ? '' : 's'})` : '') +
+    (load.middleCount ? ` — quedan ${load.middleCount} caja(s) para traer en el refill` : ''));
+}
+
+// "Extras" — cartones sueltos que se suben además de lo ya calculado: primero rellenan
+// cajas no llenas de su misma SKU, después cualquier otra caja con lugar (que pasa a
+// ser mixta), y recién si no entra en ninguna se abre una caja nueva — siempre que
+// sigamos dentro de las 13 cajas totales del vehículo. Lo que no entra dispara el
+// aviso de "Capacidad excedida".
+function addExtraToLoad(load, sku, qty) {
+  let remaining = qty;
+  const slots = allLoadSlots(load);
+
+  for (const c of slots) {
+    if (remaining <= 0) break;
+    if (!c.mixed && c.sku === sku && c.used < c.capacity) {
+      const take = Math.min(remaining, c.capacity - c.used);
+      c.used += take;
+      remaining -= take;
+    }
+  }
+  for (const c of slots) {
+    if (remaining <= 0) break;
+    const room = remainingEquiv(c);
+    if (room <= 0) continue;
+    const takeEquiv = Math.min(equivOf(sku, remaining), room);
+    const takeQty = sku === 'pcp' ? takeEquiv / 0.5 : takeEquiv;
+    if (takeQty <= 0) continue;
+    if (c.mixed) {
+      const existing = c.contents.find(ct => ct.sku === sku);
+      if (existing) existing.qty += takeQty; else c.contents.push({ sku, qty: takeQty });
+    } else if (c.sku !== sku) {
+      const prevSku = c.sku, prevQty = c.used;
+      c.mixed = true;
+      c.contents = [{ sku: prevSku, qty: prevQty }, { sku, qty: takeQty }];
+      delete c.sku; delete c.used;
+      c.capacity = CRATE_CARTONES;
+    } else {
+      continue; // misma SKU pero ya cubierto en el paso anterior
+    }
+    remaining -= takeQty;
+  }
+  while (remaining > 0 && (3 + load.bed.length) < 13) {
+    const capacity = capacityOf(sku);
+    const used = Math.min(remaining, capacity);
+    load.bed.push({ slot: 'bed_' + (load.bed.length + 1), sku, used, capacity });
+    remaining -= used;
+  }
+  return remaining <= 0; // false si no entró todo
+}
+
+function showCapacidadExcedida() { document.getElementById('capacidad-excedida-banner').classList.add('show'); }
+
+// Los 3 valores van siempre por SKU como el TOTAL vigente, no como "lo que se agrega
+// esta vez" — si se vuelve a abrir "Extras" más tarde en el día, cambiar un número
+// reemplaza el anterior (se recalcula la base y se vuelve a aplicar desde cero), no
+// se suma encima.
+let EXTRAS_QTY = { gcp: 0, gsp: 0, pcp: 0 };
+
+async function openExtrasOverlay() {
+  if (!CURRENT_LOAD) {
+    toast('Calculando la carga de nuevo…');
+    const load = await computeAndStoreLoad();
+    if (load.overflow) { toast('⚠️ Hoy hace falta refill — no se puede agregar extras'); return; }
+    renderLoadColors(load);
+  }
+  ['gcp', 'gsp', 'pcp'].forEach(k => { document.getElementById('extras-' + k).value = EXTRAS_QTY[k]; });
+  const closeBtn = document.getElementById('extras-close-btn');
+  if (closeBtn && !closeBtn.innerHTML) closeBtn.innerHTML = iconCancel(40);
+  document.getElementById('extras-overlay').classList.add('show');
+}
+function closeExtrasOverlay() { document.getElementById('extras-overlay').classList.remove('show'); }
+
+async function applyExtras() {
+  EXTRAS_QTY = {
+    gcp: parseInt(document.getElementById('extras-gcp').value, 10) || 0,
+    gsp: parseInt(document.getElementById('extras-gsp').value, 10) || 0,
+    pcp: parseInt(document.getElementById('extras-pcp').value, 10) || 0,
+  };
+  closeExtrasOverlay();
+  // Recalcula la base (sin extras) y vuelve a aplicar los 3 totales vigentes encima,
+  // en vez de sumarlos a lo que ya estuviera cargado de una corrida anterior.
+  const load = await computeAndStoreLoad();
+  if (load.overflow) { toast('⚠️ Hoy hace falta refill — no se puede agregar extras'); return; }
+  let overflow = false;
+  ['gcp', 'gsp', 'pcp'].forEach(sku => {
+    if (EXTRAS_QTY[sku] > 0 && !addExtraToLoad(load, sku, EXTRAS_QTY[sku])) overflow = true;
+  });
+  renderLoadColors(load);
+  if (overflow) showCapacidadExcedida();
+  else toast('✅ Extras agregados');
 }
 
 // Un tap corto en cualquier parte de la fila (incluida la dirección) selecciona/deselecciona
@@ -1798,6 +2855,9 @@ if (window.visualViewport) {
 }
 
 initPager();
+initCubeSheet();
+initCubeRotate();
+setExtrasEnabled(extrasAlreadyUsedToday());
 loadAll();
 setInterval(loadAll, 25000); // mismo espíritu que el auto-sync de 30s del CRM original
 </script>
