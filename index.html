@@ -701,16 +701,26 @@ function getWeekDates(offset = 0) {
   return { key, label: `${mon.toLocaleDateString('es-CR', opts)} – ${sun.toLocaleDateString('es-CR', opts)} ${sun.getFullYear()}` };
 }
 
+// "Hoy" anclado a la hora de Costa Rica (UTC-6 fijo, sin horario de verano) en vez de
+// confiar en el reloj/huso del dispositivo — así "día" significa lo mismo sin importar
+// cómo esté configurado el teléfono/tablet que corre la app.
+const CR_TZ = 'America/Costa_Rica';
+function crNow() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: CR_TZ, year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short',
+  }).formatToParts(new Date());
+  const get = type => parts.find(p => p.type === type).value;
+  return { dateKey: `${get('year')}-${get('month')}-${get('day')}`, weekday: get('weekday') };
+}
+const CR_WEEKDAY_TO_DIA = { Mon: 'lunes', Tue: 'martes', Wed: 'miercoles' };
 function todayDefaultDay() {
-  const map = { 1: 'lunes', 2: 'martes', 3: 'miercoles' };
-  return map[new Date().getDay()] || 'lunes';
+  return CR_WEEKDAY_TO_DIA[crNow().weekday] || 'lunes';
 }
 
 // Filtro activo por defecto en el dashboard "Por entregar": lunes/martes/miércoles
 // muestran su propio día, el resto de la semana (jue-dom) arranca en "Total".
 function dashDefaultDay() {
-  const map = { 1: 'lunes', 2: 'martes', 3: 'miercoles' };
-  return map[new Date().getDay()] || 'total';
+  return CR_WEEKDAY_TO_DIA[crNow().weekday] || 'total';
 }
 
 const DAY_LABEL = { lunes: 'Lun', martes: 'Mar', miercoles: 'Mié', pickup: 'Pickup' };
@@ -1202,7 +1212,7 @@ async function loadAll() {
       if (row.key === 'carga_dino_state' && !CARGA_DINO_STATE_RESTORED) {
         try {
           const saved = JSON.parse(row.value || '{}');
-          if (saved.weekKey === wk.key && saved.baseLoad) {
+          if (saved.dayKey === cargarDinoKeyToday() && saved.baseLoad) {
             BASE_LOAD = saved.baseLoad;
             BASE_LOAD_PERSONAS = saved.personas;
             PERSONAS_EN_RUTA = saved.personas || 1;
@@ -2752,13 +2762,18 @@ function cloneFullLoad(load) {
 // Guarda BASE_LOAD (y lo que hace falta para reconstruirlo igual: cuántas personas,
 // los extras vigentes, el punto de refill) para que sobreviva cerrar y volver a abrir
 // la app — antes se perdía todo al recargar la página, obligando a tocar "Cargar Dino"
-// de nuevo. Atado a la semana en curso (wk.key): si cambió la semana, este estado ya no
-// corresponde a nada real y loadAll() lo descarta en vez de restaurarlo.
+// de nuevo. Atado al día de HOY en Costa Rica (dayKey, ver cargarDinoKeyToday/crNow):
+// si ya es otro día (aunque sea la misma semana), este estado ya no corresponde a nada
+// real y loadAll() lo descarta en vez de restaurarlo — "Cargar Dino" es un plan de un
+// solo día, no de toda la semana.
 function persistCargaDinoState() {
   sbUpsert('kv_store', {
     key: 'carga_dino_state',
     value: JSON.stringify({
-      weekKey: wk.key,
+      // Por DÍA, no por semana — "Cargar Dino" es un plan de un solo día (ver
+      // todayDefaultDay()/getCargaDinoStops()), así que el plan congelado de hoy no
+      // tiene que sobrevivir a que llegue mañana, aunque siga siendo la misma semana.
+      dayKey: cargarDinoKeyToday(),
       baseLoad: BASE_LOAD,
       personas: BASE_LOAD_PERSONAS,
       extrasQty: EXTRAS_QTY,
@@ -2837,7 +2852,10 @@ async function computeAndStoreLoad() {
   return CURRENT_LOAD;
 }
 
-function cargarDinoKeyToday() { return new Date().toISOString().slice(0, 10); }
+// Ojo: NO usar new Date().toISOString() acá — esa siempre da la fecha en UTC, que para
+// Costa Rica (UTC-6) cambia de día a las 6pm hora local, 6 horas antes de la
+// medianoche real. crNow().dateKey ya está anclado a la hora de Costa Rica.
+function cargarDinoKeyToday() { return crNow().dateKey; }
 function extrasAlreadyUsedToday() {
   try { return localStorage.getItem('huevoruta_cargardino_day') === cargarDinoKeyToday(); }
   catch (e) { return false; }
