@@ -121,11 +121,16 @@
   .cube-sheet.no-anim { transition: none; }
   .cube-sheet-handle {
     flex-shrink: 0; height: 34px; display: flex; align-items: center; justify-content: center;
-    padding-top: env(safe-area-inset-top); touch-action: none;
+    /* Bajada a la misma altura que el renglón de semana del dashboard (.dash-week-nav,
+       que arranca en max(24px, safe-area-top)) — pegada arriba del todo, en iOS/iPadOS
+       un arrastre hacia abajo ahí se puede confundir con abrir el Centro de Control.
+       margin, no padding: el elemento es border-box, así que padding-top le hubiera
+       comido alto fijo en vez de empujarlo hacia abajo. */
+    margin-top: calc(max(24px, env(safe-area-inset-top)) + 9px); touch-action: none;
   }
   .cube-sheet-handle::before { content: ''; width: 44px; height: 5px; border-radius: 3px; background: var(--ink3); }
   .cube-load-bar {
-    position: absolute; top: calc(env(safe-area-inset-top) + 40px); left: 50%; transform: translateX(-50%);
+    position: absolute; top: calc(max(24px, env(safe-area-inset-top)) + 49px); left: 50%; transform: translateX(-50%);
     z-index: 2; display: flex; gap: 10px;
   }
   .cube-load-btn {
@@ -136,7 +141,7 @@
   .cube-extras-btn:disabled { opacity: 0.4; cursor: default; }
   .cube-scene {
     flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; touch-action: none;
-    padding-top: calc(env(safe-area-inset-top) + 56px); /* despeja el botón "Cargar Dino"/"Extras", que flota encima */
+    padding-top: calc(max(24px, env(safe-area-inset-top)) + 65px); /* despeja el botón "Cargar Dino"/"Extras", que flota encima */
   }
   .cube-scene canvas { touch-action: none; display: block; }
   .crate-info-item { display: flex; flex-direction: row; align-items: center; gap: 6px; }
@@ -1107,13 +1112,30 @@ function iconClipboard(size) {
 // Igual que iconNotePencil pero sin la hoja de papel — para el botón "Nota" de la
 // pantalla principal, que abre un overlay con varias opciones (no es "escribir una
 // nota" en sí). El lápiz de iconNotePencil queda igual, centrado y agrandado.
+// Mismo círculo blanco + sombra que el resto de los botones de la action-bar
+// (iconMessage, etc.: viewBox 180, circle r=73.6 con filtro de sombra) — el lápiz va
+// más chico que en iconNotePencil para que entre con margen adentro del círculo.
 function iconPencil(size) {
-  return `<svg width="${size}" height="${size}" viewBox="0 0 92 92" fill="none" xmlns="http://www.w3.org/2000/svg">
-<circle cx="46" cy="46" r="46" fill="white"/>
-<g transform="rotate(45 46 46)">
-<rect x="40" y="16" width="12" height="52" rx="3" fill="#F09C53" stroke="#242021" stroke-width="4"/>
-<path d="M40 16L46 6L52 16Z" fill="#242021"/>
+  return `<svg width="${size}" height="${size}" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g filter="url(#filter0_d_pencil)">
+<circle cx="89.6" cy="85.6" r="73.6" fill="white"/>
 </g>
+<g transform="rotate(45 90 86)">
+<rect x="81.5" y="46.9" width="17" height="76.5" rx="5" fill="#F09C53" stroke="#242021" stroke-width="5"/>
+<path d="M81.5 46.9L90 28.2L98.5 46.9Z" fill="#242021"/>
+</g>
+<defs>
+<filter id="filter0_d_pencil" x="0" y="0" width="179.2" height="179.2" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="4"/>
+<feGaussianBlur stdDeviation="8"/>
+<feComposite in2="hardAlpha" operator="out"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0.239615 0 0 0 0 0.353433 0 0 0 0 0.599038 0 0 0 0.18 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_pencil"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_pencil" result="shape"/>
+</filter>
+</defs>
 </svg>`;
 }
 function iconNotePencil(size) {
@@ -1375,15 +1397,11 @@ function initPager() {
       }
     }
     if (isSwipe) {
-      dx = curDx;
-      // Solo se previsualiza deslizando el pager si hay una pantalla DE ESTE PAGER de
-      // ese lado — si no hay nada (lado inexistente), o si del otro lado se va a
-      // reabrir la pantalla 3D (un overlay aparte, no una página de este pager), no se
-      // mueve nada hasta soltar; dx ya queda guardado para decidir igual al soltar.
-      const noPagerPreview = (pagerIndex === 1 && curDx < 0) || (pagerIndex === 0 && curDx > 0) ||
-        (pagerIndex === 1 && curDx > 0 && mainReturnTarget === '3d');
-      if (noPagerPreview) return;
+      // Solo se puede arrastrar hacia la pantalla que efectivamente existe de ese lado.
+      if (pagerIndex === 1 && curDx < 0) return;
+      if (pagerIndex === 0 && curDx > 0) return;
       e.preventDefault();
+      dx = curDx;
       const basePct = -pagerIndex * 50;
       pager.style.transform = `translateX(${basePct + (dx / window.innerWidth) * 50}%)`;
     }
@@ -1391,17 +1409,8 @@ function initPager() {
   const endDrag = () => {
     if (isSwipe) {
       pager.classList.remove('no-anim');
-      if (pagerIndex === 1 && dx > SWIPE_THRESHOLD) {
-        // Si la pantalla principal se dejó cerrando la 3D (ver initCubeSwipeClose),
-        // deslizar a la derecha desde acá vuelve a abrirla en vez de ir al dashboard —
-        // "la pantalla de la que vino". Por defecto (recién abierta la app, o se llegó
-        // acá desde el dashboard) va al dashboard, como siempre.
-        if (mainReturnTarget === '3d') openCubeSheet();
-        else pagerIndex = 0;
-      } else if (pagerIndex === 0 && dx < -SWIPE_THRESHOLD) {
-        pagerIndex = 1;
-        mainReturnTarget = 'dashboard'; // se llegó a la principal por el camino de siempre, no cerrando la 3D
-      }
+      if (pagerIndex === 1 && dx > SWIPE_THRESHOLD) pagerIndex = 0;
+      else if (pagerIndex === 0 && dx < -SWIPE_THRESHOLD) pagerIndex = 1;
       pager.style.transform = `translateX(${-pagerIndex * 50}%)`;
     }
     startX = null; isSwipe = null;
@@ -1428,6 +1437,10 @@ function closeCubeSheet() {
   if (!cubeSheetOpen) return;
   cubeSheetOpen = false;
   document.getElementById('cube-sheet').style.transform = 'translateY(100%)';
+  // La pantalla 3D solo se abre tirando de la pestaña del dashboard (ver
+  // #cube-pull-tab) — bajarla siempre vuelve al dashboard, nunca a la principal.
+  pagerIndex = 0;
+  document.getElementById('pager').style.transform = `translateX(${-pagerIndex * 50}%)`;
 }
 function initCubeSheet() {
   const sheet = document.getElementById('cube-sheet');
@@ -1463,48 +1476,6 @@ function initCubeSheet() {
   bindDrag(closeHandle);
 }
 
-// Deslizar hacia la izquierda arrancando en un lugar donde NO se toca el modelo 3D
-// (ver rayHitsModel) cierra esta pantalla y vuelve a la principal — si arrancara sobre
-// el modelo, se confundiría con girarlo/tocar una caja, así que ese caso queda afuera
-// por completo (el gesto ni se seguiría). Guarda además cuál pantalla se dejó, para que
-// deslizar a la derecha desde la principal vuelva acá en vez de ir al dashboard.
-let mainReturnTarget = 'dashboard'; // 'dashboard' | '3d' — ver initPager
-function initCubeSwipeClose() {
-  const sheet = document.getElementById('cube-sheet');
-  const SWIPE_THRESHOLD = 70;
-  const DIRECTION_LOCK = 10;
-  let activePointerId = null, startX = null, startY = null, eligible = false, locked = null;
-
-  sheet.addEventListener('pointerdown', e => {
-    if (activePointerId !== null) { eligible = false; return; } // ya hay otro dedo (pinch) — no es un swipe
-    activePointerId = e.pointerId;
-    startX = e.clientX; startY = e.clientY; locked = null;
-    eligible = cubeSheetOpen && !rayHitsModel(e.clientX, e.clientY);
-  });
-  sheet.addEventListener('pointermove', e => {
-    if (e.pointerId !== activePointerId || !eligible) return;
-    const dx = e.clientX - startX, dy = e.clientY - startY;
-    if (locked === null && (Math.abs(dx) > DIRECTION_LOCK || Math.abs(dy) > DIRECTION_LOCK)) {
-      locked = Math.abs(dx) > Math.abs(dy);
-    }
-  });
-  const endDrag = e => {
-    if (e.pointerId !== activePointerId) return;
-    if (eligible && locked) {
-      const dx = e.clientX - startX;
-      if (dx < -SWIPE_THRESHOLD) {
-        closeCubeSheet();
-        pagerIndex = 1; // pantalla principal
-        document.getElementById('pager').style.transform = `translateX(${-pagerIndex * 50}%)`;
-        mainReturnTarget = '3d';
-      }
-    }
-    activePointerId = null; eligible = false; locked = null;
-  };
-  sheet.addEventListener('pointerup', endDrag);
-  sheet.addEventListener('pointercancel', endDrag);
-}
-
 // Modelo 3D real (OBJ+MTL exportado de Fusion 360, con las 13 cajas como cuerpos
 // nombrados) en vez del cubo de prueba. Misma interacción de arrastrar-para-rotar
 // que el prototipo anterior, ahora aplicada al mesh de three.js.
@@ -1519,10 +1490,6 @@ const CRATE_TAP_PROXIES = { 'low2_ret (1)': 'crate_bed_2' };
 const DEFAULT_CUBE_ROT = { x: 0.3, y: Math.PI - 0.6 };
 const DEFAULT_CUBE_DIST = 5;
 let resetCubeView = () => {}; // se asigna de verdad dentro de initCubeRotate, una vez que existen pivot/camera
-// true si ese punto de pantalla toca el modelo 3D (cualquier parte, no solo una caja) —
-// se asigna de verdad dentro de initCubeRotate. La usa initCubeSwipeClose para que un
-// swipe de cierre nunca se confunda con girar/seleccionar algo del modelo.
-let rayHitsModel = () => false;
 function initCubeRotate() {
   const container = document.getElementById('cube-scene');
 
@@ -1723,16 +1690,6 @@ function initCubeRotate() {
     }
     deselectCrate(); // ninguna caja visible hoy quedó bajo el toque (carrocería, o una caja oculta)
   }
-  rayHitsModel = (clientX, clientY) => {
-    const rect = container.getBoundingClientRect();
-    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) return false;
-    const ndc = new THREE.Vector2(
-      ((clientX - rect.left) / rect.width) * 2 - 1,
-      -((clientY - rect.top) / rect.height) * 2 + 1
-    );
-    raycaster.setFromCamera(ndc, camera);
-    return raycaster.intersectObject(pivot, true).length > 0;
-  };
   // Tocar cualquier parte en blanco de la pantalla (fuera de la escena 3D, donde el
   // toque corto ya se maneja arriba) también deselecciona.
   document.getElementById('cube-sheet').addEventListener('click', e => {
@@ -3596,7 +3553,6 @@ if (window.visualViewport) {
 
 initPager();
 initCubeSheet();
-initCubeSwipeClose();
 initCubeRotate();
 setExtrasEnabled(extrasAlreadyUsedToday());
 loadAll();
