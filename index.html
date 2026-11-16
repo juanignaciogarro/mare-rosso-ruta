@@ -134,17 +134,29 @@
   }
   .cube-extras-btn { background: var(--cream); }
   .cube-extras-btn:disabled { opacity: 0.4; cursor: default; }
-  /* Franja arriba del vehículo (no encima) para no competir con el modelo 3D — se
-     reserva el alto siempre, aunque no haya ninguna caja seleccionada, para que el
-     vehículo no salte de lugar al tocar una caja. */
-  .crate-info-panel {
-    flex-shrink: 0; min-height: 160px; margin: calc(env(safe-area-inset-top) + 84px) 20px 0;
-    display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap;
+  .cube-scene {
+    flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; touch-action: none;
+    padding-top: calc(env(safe-area-inset-top) + 56px); /* despeja el botón "Cargar Dino"/"Extras", que flota encima */
   }
-  .crate-info-item { display: flex; flex-direction: row; align-items: center; gap: 10px; }
-  .crate-info-qty { font-size: 60px; font-weight: 400; color: var(--ink); line-height: 1; }
-  .cube-scene { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; touch-action: none; }
   .cube-scene canvas { touch-action: none; display: block; }
+  .crate-info-item { display: flex; flex-direction: row; align-items: center; gap: 6px; }
+  .crate-info-qty { font-size: 36px; font-weight: 400; color: var(--ink); line-height: 1; } /* mismo tamaño/peso que .dash-num */
+  /* Franja de íconos al pie del 3D: por defecto muestra los extra cartones a bordo por
+     SKU; al tocar una caja, esos mismos íconos pasan a mostrar el contenido de esa caja
+     y el fondo se tiñe con un tono claro derivado del color de la caja (ver
+     crateIconsTint en JS) — así no hace falta una franja aparte arriba del vehículo
+     para "achicarle" pantalla al modelo 3D. */
+  .crate-icons-panel {
+    flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 14px 20px calc(env(safe-area-inset-bottom) + 28px);
+    background: #fff; transition: background-color 0.2s ease;
+  }
+  .crate-icons-title {
+    font-weight: 800; font-size: 13px; letter-spacing: 0.03em; text-transform: uppercase; color: var(--ink);
+  }
+  .crate-icons-row { display: flex; align-items: center; justify-content: center; gap: 22px; min-height: 60px; }
+  .personas-stepper { display: flex; align-items: center; justify-content: center; gap: 28px; margin: 24px 0; }
+  .personas-count { font-size: 44px; font-weight: 800; min-width: 54px; text-align: center; }
   .extras-field { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.12); }
   .extras-field label { font-weight: 700; font-size: 15px; }
   .extras-field input {
@@ -205,18 +217,15 @@
   .client-block { flex-shrink: 0; }
   .client-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
   .client-name { font-size: clamp(22px, 5.5vw, 28px); font-weight: 800; line-height: 1.2; }
-  /* nowrap a propósito: en pantallas angostas, zona+dirección en 2 líneas (o la
-     dirección envolviendo dentro de su propia línea) suma alto variable al bloque del
-     cliente actual — eso es lo que en ciertos aspect ratios empuja la action-bar (abajo
-     del todo, siempre debe quedar visible mientras se maneja) fuera del viewport, y
-     main{overflow:hidden} la recorta en vez de mostrarla. Se trunca con "…" en vez de
-     dejarla crecer; la dirección completa sigue disponible via el pin de Waze y la ruta
-     completa. */
-  .client-row { display: flex; justify-content: flex-start; align-items: baseline; gap: 18px; margin-top: 8px; min-width: 0; }
+  /* La nota tiene que leerse completa (no truncarla con "…") — por eso envuelve en vez
+     de ir en una sola línea. Si eso hace crecer el bloque más de lo que entra en
+     pantalla, .body-pad ya tiene su propia red de seguridad (overflow-y:auto) para
+     poder scrollear hasta la action-bar en vez de que quede recortada. */
+  .client-row { display: flex; justify-content: flex-start; align-items: flex-start; gap: 18px; margin-top: 8px; min-width: 0; }
   .waze-pin-btn { border: none; background: none; padding: 0; cursor: pointer; flex-shrink: 0; margin-right: 28px; }
   .waze-pin-btn:disabled { opacity: 0.5; }
   .client-zona { color: var(--orange-dark); font-weight: 800; font-size: 15px; white-space: nowrap; flex-shrink: 0; }
-  .client-addr { text-align: left; font-size: 15px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .client-addr { text-align: left; font-size: 15px; min-width: 0; white-space: normal; overflow-wrap: break-word; }
   .addr-link { color: inherit; text-decoration: none; }
   .client-addr .condo { color: var(--ink2); font-weight: 800; }
   .client-addr .casa { color: var(--ink); font-weight: 500; font-size: 20px; margin-left: 4px; }
@@ -299,7 +308,7 @@
     align-items: flex-end; justify-content: center; z-index: 500;
   }
   .overlay-backdrop.show { display: flex; }
-  #extras-overlay { z-index: 700; } /* por encima de .cube-sheet (600), se abre desde ahí */
+  #extras-overlay, #personas-overlay { z-index: 700; } /* por encima de .cube-sheet (600), se abren desde ahí */
   /* Interacción táctil — nunca mostrar la barra de scroll, aunque siga siendo desplazable. */
   .overlay-card, .route-list { scrollbar-width: none; -ms-overflow-style: none; }
   .overlay-card::-webkit-scrollbar, .route-list::-webkit-scrollbar { display: none; width: 0; height: 0; }
@@ -331,6 +340,18 @@
     display: flex; border: none; background: none; padding: 0;
     align-items: center; justify-content: center; cursor: pointer;
   }
+
+  .note-options { display: flex; flex-direction: column; gap: 12px; margin-top: 6px; }
+  .note-option-btn {
+    display: flex; align-items: center; gap: 14px; width: 100%; text-align: left;
+    border: none; background: rgba(255,255,255,0.08); color: #fff; font-family: inherit;
+    font-weight: 800; font-size: 16px; padding: 10px 16px; border-radius: 18px; cursor: pointer;
+  }
+  .note-textarea {
+    width: 100%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); border-radius: 14px;
+    padding: 12px; color: #fff; font-size: 15px; font-family: inherit; resize: vertical; min-height: 90px; margin-top: 12px;
+  }
+  .note-save-row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
 
   /* En el overlay de ruta, header y filtro quedan fijos — solo la lista hace scroll. */
   #route-overlay .overlay-card { display: flex; flex-direction: column; overflow: hidden; }
@@ -460,11 +481,29 @@
 <div class="cube-sheet" id="cube-sheet">
   <div class="cube-sheet-handle" id="cube-sheet-handle"></div>
   <div class="cube-load-bar">
-    <button class="cube-load-btn" onclick="cargarDino()">Cargar Dino</button>
+    <button class="cube-load-btn" onclick="openPersonasOverlay()">Cargar Dino</button>
     <button class="cube-load-btn cube-extras-btn" id="extras-btn" onclick="openExtrasOverlay()" disabled>Extras</button>
   </div>
-  <div class="crate-info-panel" id="crate-info-panel"></div>
   <div class="cube-scene" id="cube-scene"></div>
+  <div class="crate-icons-panel" id="crate-icons-panel">
+    <div class="crate-icons-title" id="crate-icons-title">Extras a bordo</div>
+    <div class="crate-icons-row" id="crate-icons-row"></div>
+  </div>
+</div>
+
+<div id="personas-overlay" class="overlay-backdrop" onclick="if(event.target===this) closePersonasOverlay()">
+  <div class="overlay-card">
+    <div class="route-header">
+      <div class="flash-title">¿Personas en ruta?</div>
+      <button class="round-btn" id="personas-close-btn" title="Cerrar" onclick="closePersonasOverlay()"></button>
+    </div>
+    <div class="personas-stepper">
+      <button class="round-btn dark" onclick="changePersonasDraft(-1)">−</button>
+      <div class="personas-count" id="personas-count-display">1</div>
+      <button class="round-btn dark" onclick="changePersonasDraft(1)">+</button>
+    </div>
+    <button class="dash-refill-btn" onclick="confirmPersonasAndLoad()">Continuar</button>
+  </div>
 </div>
 
 <div id="extras-overlay" class="overlay-backdrop" onclick="if(event.target===this) closeExtrasOverlay()">
@@ -474,12 +513,12 @@
       <button class="round-btn" id="extras-close-btn" title="Cerrar" onclick="closeExtrasOverlay()"></button>
     </div>
     <div class="extras-field">
-      <label>Grandes con plástico</label>
-      <input type="number" min="0" inputmode="numeric" id="extras-gcp" value="0">
-    </div>
-    <div class="extras-field">
       <label>Grandes sin plástico</label>
       <input type="number" min="0" inputmode="numeric" id="extras-gsp" value="0">
+    </div>
+    <div class="extras-field">
+      <label>Grandes con plástico</label>
+      <input type="number" min="0" inputmode="numeric" id="extras-gcp" value="0">
     </div>
     <div class="extras-field">
       <label>Pequeños</label>
@@ -490,7 +529,7 @@
 </div>
 
 <div id="capacidad-excedida-banner" class="capacidad-excedida-banner">
-  <span>Capacidad excedida</span>
+  <span id="capacidad-excedida-text">Capacidad excedida</span>
   <button onclick="document.getElementById('capacidad-excedida-banner').classList.remove('show')">×</button>
 </div>
 
@@ -511,6 +550,14 @@
 
 <div id="message-overlay" class="overlay-backdrop" onclick="if(event.target===this) closeMessageOverlay()">
   <div class="overlay-card" id="message-overlay-body"></div>
+</div>
+
+<div id="note-overlay" class="overlay-backdrop" onclick="if(event.target===this) closeNoteOverlay()">
+  <div class="overlay-card" id="note-overlay-body"></div>
+</div>
+
+<div id="modify-overlay" class="overlay-backdrop" onclick="if(event.target===this) closeModifyOverlay()">
+  <div class="overlay-card" id="modify-overlay-body"></div>
 </div>
 
 <div id="route-overlay" class="overlay-backdrop" onclick="if(event.target===this) closeRouteOverlay()">
@@ -1032,6 +1079,76 @@ function iconNoteWarn(size) {
 </svg>`;
 }
 
+function iconClipboard(size) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g filter="url(#filter0_d_clipboard)">
+<circle cx="89.6" cy="85.6" r="73.6" fill="white"/>
+</g>
+<rect x="60" y="51" width="60" height="78" rx="10" fill="none" stroke="#242021" stroke-width="6"/>
+<rect x="76" y="42" width="28" height="16" rx="6" fill="#242021"/>
+<line x1="72" y1="77" x2="108" y2="77" stroke="#242021" stroke-width="6" stroke-linecap="round"/>
+<line x1="72" y1="94" x2="108" y2="94" stroke="#242021" stroke-width="6" stroke-linecap="round"/>
+<line x1="72" y1="111" x2="96" y2="111" stroke="#242021" stroke-width="6" stroke-linecap="round"/>
+<defs>
+<filter id="filter0_d_clipboard" x="0" y="0" width="179.2" height="179.2" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="4"/>
+<feGaussianBlur stdDeviation="8"/>
+<feComposite in2="hardAlpha" operator="out"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0.239615 0 0 0 0 0.353433 0 0 0 0 0.599038 0 0 0 0.18 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_clipboard"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_clipboard" result="shape"/>
+</filter>
+</defs>
+</svg>`;
+}
+
+// Igual que iconNotePencil pero sin la hoja de papel — para el botón "Nota" de la
+// pantalla principal, que abre un overlay con varias opciones (no es "escribir una
+// nota" en sí). El lápiz de iconNotePencil queda igual, centrado y agrandado.
+function iconPencil(size) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 92 92" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="46" cy="46" r="46" fill="white"/>
+<g transform="rotate(45 46 46)">
+<rect x="40" y="16" width="12" height="52" rx="3" fill="#F09C53" stroke="#242021" stroke-width="4"/>
+<path d="M40 16L46 6L52 16Z" fill="#242021"/>
+</g>
+</svg>`;
+}
+function iconNotePencil(size) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 92 92" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="46" cy="46" r="46" fill="white"/>
+<rect x="26" y="20" width="34" height="44" rx="4" fill="#FBEFE3" stroke="#242021" stroke-width="4"/>
+<line x1="34" y1="32" x2="52" y2="32" stroke="#242021" stroke-width="4" stroke-linecap="round"/>
+<line x1="34" y1="42" x2="48" y2="42" stroke="#242021" stroke-width="4" stroke-linecap="round"/>
+<g transform="rotate(45 60 60)">
+<rect x="54" y="38" width="12" height="38" rx="3" fill="#F09C53" stroke="#242021" stroke-width="4"/>
+<path d="M54 38L60 28L66 38Z" fill="#242021"/>
+</g>
+</svg>`;
+}
+
+function iconSwapOrder(size) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 92 92" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="46" cy="46" r="46" fill="white"/>
+<path d="M28 36H58M58 36L50 28M58 36L50 44" stroke="#242021" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M64 56H34M34 56L42 48M34 56L42 64" stroke="#242021" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+}
+
+function iconReschedule(size) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 92 92" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="46" cy="46" r="46" fill="white"/>
+<rect x="24" y="26" width="34" height="32" rx="5" fill="#FBEFE3" stroke="#242021" stroke-width="4"/>
+<line x1="24" y1="36" x2="58" y2="36" stroke="#242021" stroke-width="4"/>
+<line x1="32" y1="20" x2="32" y2="30" stroke="#242021" stroke-width="4" stroke-linecap="round"/>
+<line x1="50" y1="20" x2="50" y2="30" stroke="#242021" stroke-width="4" stroke-linecap="round"/>
+<circle cx="63" cy="60" r="16" fill="#F09C53" stroke="#242021" stroke-width="4"/>
+<path d="M63 52V60L69 64" stroke="#242021" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+}
+
 // ═══════════════════════════════════════════════
 // Load data
 // ═══════════════════════════════════════════════
@@ -1187,6 +1304,13 @@ async function setEntregado(stop, entregado) {
     else delete ENTREGA_TS[tsKey];
     sbUpsert('kv_store', { key: 'entrega_ts', value: JSON.stringify(ENTREGA_TS) }).catch(e => console.error(e));
 
+    // Si ya se corrió "Cargar Dino" hoy, el cajón tiene que reflejar esta entrega al
+    // toque, no recién la próxima vez que se apriete el botón — pero marcar/reversar
+    // una entrega NO es un "momento de carga": ninguna caja cambia de lugar ni de
+    // mezcla, solo se topa la parte real de lo que ya estaba cargado (ver
+    // computeAndStoreLoad/capLoadToReal) contra lo que de verdad sigue pendiente.
+    if (CURRENT_LOAD) { await computeAndStoreLoad(); renderLoadColors(CURRENT_LOAD); }
+
     toast(entregado ? '✓ Marcado como entregado' : '↩ Entrega reversada');
     render();
     if (document.getElementById('route-overlay').classList.contains('show')) renderRouteOverlay();
@@ -1251,11 +1375,15 @@ function initPager() {
       }
     }
     if (isSwipe) {
-      // Solo se puede arrastrar hacia la pantalla que efectivamente existe de ese lado.
-      if (pagerIndex === 1 && curDx < 0) return;
-      if (pagerIndex === 0 && curDx > 0) return;
-      e.preventDefault();
       dx = curDx;
+      // Solo se previsualiza deslizando el pager si hay una pantalla DE ESTE PAGER de
+      // ese lado — si no hay nada (lado inexistente), o si del otro lado se va a
+      // reabrir la pantalla 3D (un overlay aparte, no una página de este pager), no se
+      // mueve nada hasta soltar; dx ya queda guardado para decidir igual al soltar.
+      const noPagerPreview = (pagerIndex === 1 && curDx < 0) || (pagerIndex === 0 && curDx > 0) ||
+        (pagerIndex === 1 && curDx > 0 && mainReturnTarget === '3d');
+      if (noPagerPreview) return;
+      e.preventDefault();
       const basePct = -pagerIndex * 50;
       pager.style.transform = `translateX(${basePct + (dx / window.innerWidth) * 50}%)`;
     }
@@ -1263,8 +1391,17 @@ function initPager() {
   const endDrag = () => {
     if (isSwipe) {
       pager.classList.remove('no-anim');
-      if (pagerIndex === 1 && dx > SWIPE_THRESHOLD) pagerIndex = 0;
-      else if (pagerIndex === 0 && dx < -SWIPE_THRESHOLD) pagerIndex = 1;
+      if (pagerIndex === 1 && dx > SWIPE_THRESHOLD) {
+        // Si la pantalla principal se dejó cerrando la 3D (ver initCubeSwipeClose),
+        // deslizar a la derecha desde acá vuelve a abrirla en vez de ir al dashboard —
+        // "la pantalla de la que vino". Por defecto (recién abierta la app, o se llegó
+        // acá desde el dashboard) va al dashboard, como siempre.
+        if (mainReturnTarget === '3d') openCubeSheet();
+        else pagerIndex = 0;
+      } else if (pagerIndex === 0 && dx < -SWIPE_THRESHOLD) {
+        pagerIndex = 1;
+        mainReturnTarget = 'dashboard'; // se llegó a la principal por el camino de siempre, no cerrando la 3D
+      }
       pager.style.transform = `translateX(${-pagerIndex * 50}%)`;
     }
     startX = null; isSwipe = null;
@@ -1276,6 +1413,22 @@ function initPager() {
 // PROTOTIPO: pestaña del dashboard que se arrastra hacia arriba para revelar la
 // pantalla del cubo 3D, y el tirador propio de esa pantalla para volver a cerrarla.
 let cubeSheetOpen = false;
+// Siempre arranca desde el mismo ángulo/zoom al abrir — si no, queda como la dejó el
+// último arrastre, aunque se haya cerrado y vuelto a abrir después. Los guardas
+// (if cubeSheetOpen/!cubeSheetOpen) evitan resetear la vista si ya estaba en ese estado
+// (ej. se arrastró el tirador un poco sin cruzar el umbral y volvió a quedar igual).
+function openCubeSheet() {
+  if (cubeSheetOpen) return;
+  cubeSheetOpen = true;
+  document.getElementById('cube-sheet').style.transform = 'translateY(0)';
+  resetCubeView();
+  renderCrateIconsPanel();
+}
+function closeCubeSheet() {
+  if (!cubeSheetOpen) return;
+  cubeSheetOpen = false;
+  document.getElementById('cube-sheet').style.transform = 'translateY(100%)';
+}
 function initCubeSheet() {
   const sheet = document.getElementById('cube-sheet');
   const pullTab = document.getElementById('cube-pull-tab');
@@ -1300,12 +1453,8 @@ function initCubeSheet() {
       if (!dragging) return;
       dragging = false;
       sheet.classList.remove('no-anim');
-      const wasOpen = cubeSheetOpen;
-      cubeSheetOpen = cubeSheetOpen ? !(dy > DRAG_THRESHOLD) : dy < -DRAG_THRESHOLD;
-      sheet.style.transform = cubeSheetOpen ? 'translateY(0)' : 'translateY(100%)';
-      // Siempre arranca desde el mismo ángulo/zoom al abrir — si no, queda como la
-      // dejó el último arrastre, aunque se haya cerrado y vuelto a abrir después.
-      if (cubeSheetOpen && !wasOpen) resetCubeView();
+      const shouldOpen = cubeSheetOpen ? !(dy > DRAG_THRESHOLD) : dy < -DRAG_THRESHOLD;
+      if (shouldOpen) openCubeSheet(); else closeCubeSheet();
     };
     handleEl.addEventListener('pointerup', endDrag);
     handleEl.addEventListener('pointercancel', endDrag);
@@ -1314,13 +1463,66 @@ function initCubeSheet() {
   bindDrag(closeHandle);
 }
 
+// Deslizar hacia la izquierda arrancando en un lugar donde NO se toca el modelo 3D
+// (ver rayHitsModel) cierra esta pantalla y vuelve a la principal — si arrancara sobre
+// el modelo, se confundiría con girarlo/tocar una caja, así que ese caso queda afuera
+// por completo (el gesto ni se seguiría). Guarda además cuál pantalla se dejó, para que
+// deslizar a la derecha desde la principal vuelva acá en vez de ir al dashboard.
+let mainReturnTarget = 'dashboard'; // 'dashboard' | '3d' — ver initPager
+function initCubeSwipeClose() {
+  const sheet = document.getElementById('cube-sheet');
+  const SWIPE_THRESHOLD = 70;
+  const DIRECTION_LOCK = 10;
+  let activePointerId = null, startX = null, startY = null, eligible = false, locked = null;
+
+  sheet.addEventListener('pointerdown', e => {
+    if (activePointerId !== null) { eligible = false; return; } // ya hay otro dedo (pinch) — no es un swipe
+    activePointerId = e.pointerId;
+    startX = e.clientX; startY = e.clientY; locked = null;
+    eligible = cubeSheetOpen && !rayHitsModel(e.clientX, e.clientY);
+  });
+  sheet.addEventListener('pointermove', e => {
+    if (e.pointerId !== activePointerId || !eligible) return;
+    const dx = e.clientX - startX, dy = e.clientY - startY;
+    if (locked === null && (Math.abs(dx) > DIRECTION_LOCK || Math.abs(dy) > DIRECTION_LOCK)) {
+      locked = Math.abs(dx) > Math.abs(dy);
+    }
+  });
+  const endDrag = e => {
+    if (e.pointerId !== activePointerId) return;
+    if (eligible && locked) {
+      const dx = e.clientX - startX;
+      if (dx < -SWIPE_THRESHOLD) {
+        closeCubeSheet();
+        pagerIndex = 1; // pantalla principal
+        document.getElementById('pager').style.transform = `translateX(${-pagerIndex * 50}%)`;
+        mainReturnTarget = '3d';
+      }
+    }
+    activePointerId = null; eligible = false; locked = null;
+  };
+  sheet.addEventListener('pointerup', endDrag);
+  sheet.addEventListener('pointercancel', endDrag);
+}
+
 // Modelo 3D real (OBJ+MTL exportado de Fusion 360, con las 13 cajas como cuerpos
 // nombrados) en vez del cubo de prueba. Misma interacción de arrastrar-para-rotar
 // que el prototipo anterior, ahora aplicada al mesh de three.js.
 let TRUCK_CRATES = {}; // nombre de cuerpo -> Object3D, llenado una vez carga el modelo
+// Caja actualmente tocada en el modelo 3D (o null) — global (no solo del closure de
+// initCubeRotate) porque renderCrateIconsPanel() y renderLoadColors() también la leen.
+let selectedCrateName = null;
+// Piezas decorativas del modelo que, de tan pegadas a una caja, casi no dejan tocarla
+// directo — tocar la pieza cuenta como tocar la caja que tapa. "low2_ret (1)" es el
+// tronco decorativo que se superpone a la caja del volumen 2 (crate_bed_2).
+const CRATE_TAP_PROXIES = { 'low2_ret (1)': 'crate_bed_2' };
 const DEFAULT_CUBE_ROT = { x: 0.3, y: Math.PI - 0.6 };
 const DEFAULT_CUBE_DIST = 5;
 let resetCubeView = () => {}; // se asigna de verdad dentro de initCubeRotate, una vez que existen pivot/camera
+// true si ese punto de pantalla toca el modelo 3D (cualquier parte, no solo una caja) —
+// se asigna de verdad dentro de initCubeRotate. La usa initCubeSwipeClose para que un
+// swipe de cierre nunca se confunda con girar/seleccionar algo del modelo.
+let rayHitsModel = () => false;
 function initCubeRotate() {
   const container = document.getElementById('cube-scene');
 
@@ -1380,12 +1582,10 @@ function initCubeRotate() {
       });
       console.log('TRUCK_CRATES', Object.keys(TRUCK_CRATES));
 
-      // La cabina siempre tiene el mismo contenido (regla fija, no depende del día),
-      // así que esos 3 colores se pintan apenas carga el modelo. Las 10 cajas de la
-      // caja de carga se pintan recién cuando "Cargar Dino" calcule qué va en cada una.
-      setCrateSku('crate_copilot', 'gcp');
-      setCrateSku('crate_backseat_left', 'pcp');
-      setCrateSku('crate_backseat_right', 'pcp');
+      // Las 13 cajas (cabina + caja de carga) se pintan y se muestran/ocultan recién
+      // cuando "Cargar Dino"/"Extras" calculen qué va en cada una ese día — ninguna
+      // caja es fija del vehículo, así que todas arrancan con su apariencia original
+      // de Fusion hasta que haya una carga calculada.
 
       // Arreglo de apariencias del modelo, confirmado tocando cada pieza directo en
       // la escena (no por nombre a ciegas):
@@ -1478,7 +1678,6 @@ function initCubeRotate() {
   // Tocar la misma caja de nuevo, o cualquier parte en blanco (de la escena 3D o del
   // resto de la pantalla), la deselecciona.
   let downX = 0, downY = 0, gestureHadPinch = false;
-  let selectedCrateName = null;
   const raycaster = new THREE.Raycaster();
 
   function selectCrate(name) {
@@ -1486,13 +1685,13 @@ function initCubeRotate() {
     if (selectedCrateName) setCrateHighlight(TRUCK_CRATES[selectedCrateName], false);
     selectedCrateName = name;
     setCrateHighlight(TRUCK_CRATES[name], true);
-    showCrateInfo(name);
+    renderCrateIconsPanel();
   }
   function deselectCrate() {
     if (!selectedCrateName) return;
     setCrateHighlight(TRUCK_CRATES[selectedCrateName], false);
     selectedCrateName = null;
-    showCrateInfo(null);
+    renderCrateIconsPanel();
   }
 
   function handleCrateTap(clientX, clientY) {
@@ -1502,15 +1701,38 @@ function initCubeRotate() {
       -((clientY - rect.top) / rect.height) * 2 + 1
     );
     raycaster.setFromCamera(ndc, camera);
+    // Recorre TODos los impactos del rayo (no solo el más cercano): three.js no
+    // descarta objetos invisibles al raycastear (eso solo afecta el render), y las
+    // cajas que hoy no se usan (setCrateVisible(false)) siguen ahí, ocupando su lugar
+    // fijo — pueden "taparle" el toque a una caja vecina que sí está visible. Por eso
+    // cada impacto se valida con obj.visible, y si no sirve se sigue probando el
+    // siguiente más lejano en vez de quedarse con el primero que haya.
     const hits = raycaster.intersectObject(pivot, true);
-    if (!hits.length) { deselectCrate(); return; }
-    let obj = hits[0].object;
-    while (obj && obj !== pivot) {
-      if (obj.name && TRUCK_CRATES[obj.name] === obj) { selectCrate(obj.name); return; }
-      obj = obj.parent;
+    for (const hit of hits) {
+      let obj = hit.object;
+      while (obj && obj !== pivot) {
+        if (obj.name) {
+          if (TRUCK_CRATES[obj.name] === obj && obj.visible) { selectCrate(obj.name); return; }
+          // El tronco decorativo ("low2_ret") tapa casi toda la caja del volumen 2 desde
+          // el ángulo por defecto — tocarlo cuenta como tocar esa caja en vez de fallar.
+          const proxyTarget = CRATE_TAP_PROXIES[obj.name];
+          if (proxyTarget && TRUCK_CRATES[proxyTarget] && TRUCK_CRATES[proxyTarget].visible) { selectCrate(proxyTarget); return; }
+        }
+        obj = obj.parent;
+      }
     }
-    deselectCrate(); // tocó el vehículo pero no una de las 13 cajas (ej. la carrocería)
+    deselectCrate(); // ninguna caja visible hoy quedó bajo el toque (carrocería, o una caja oculta)
   }
+  rayHitsModel = (clientX, clientY) => {
+    const rect = container.getBoundingClientRect();
+    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) return false;
+    const ndc = new THREE.Vector2(
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -((clientY - rect.top) / rect.height) * 2 + 1
+    );
+    raycaster.setFromCamera(ndc, camera);
+    return raycaster.intersectObject(pivot, true).length > 0;
+  };
   // Tocar cualquier parte en blanco de la pantalla (fuera de la escena 3D, donde el
   // toque corto ya se maneja arriba) también deselecciona.
   document.getElementById('cube-sheet').addEventListener('click', e => {
@@ -1821,11 +2043,11 @@ function render() {
               </div>
             </div>`).join('')}
         </div>
-        <button class="chevron-btn" onclick="openRouteOverlay()" title="Ver ruta completa">${iconChevron(66)}</button>
-      </div>` : `<div class="next-block"><button class="chevron-btn" style="margin-left:auto" onclick="openRouteOverlay()" title="Ver ruta completa">${iconChevron(66)}</button></div>`}
+        <button class="chevron-btn" onclick="openRouteOverlay()" title="Ver ruta completa">${iconClipboard(66)}</button>
+      </div>` : `<div class="next-block"><button class="chevron-btn" style="margin-left:auto" onclick="openRouteOverlay()" title="Ver ruta completa">${iconClipboard(66)}</button></div>`}
       <div class="action-bar">
         <button id="msg-btn" class="round-btn" title="Mensaje">${iconMessage(90)}</button>
-        <button id="call-btn" class="round-btn" title="Llamar">${iconCall(90)}</button>
+        <button id="note-btn" class="round-btn" title="Nota">${iconPencil(90)}</button>
         <button id="egg-btn" class="egg-btn" title="Confirmar entrega">${iconEggConfirm(122)}</button>
       </div>
     </div>`;
@@ -1845,8 +2067,15 @@ const DASH_PILLS = [
 ];
 let dashDay = dashDefaultDay();
 let dashWeekOffset = 0; // navegación de semana en el dashboard, independiente de la ruta en vivo (siempre semana actual)
-// Capacidad del vehículo en "cartones" (cartón grande = 1, chico = 0.5) — 13 cajas x 10 c/u.
-const VEHICLE_CAPACITY_CARTONES = 130;
+// Capacidad del vehículo en "cartones" (cartón grande = 1, chico = 0.5) — 13 cajas x 10
+// c/u con 1 persona (130), pero la cabina pierde lugar con 2 o 3 personas a bordo (ver
+// cabinCapsForPersonas) — 120 y 110 respectivamente. Se deriva de esa misma función en
+// vez de tener un segundo número a mano, para que nunca queden desincronizados.
+function vehicleCapacityCartones(personas) {
+  const caps = cabinCapsForPersonas(personas);
+  const cabinEquiv = equivOf('gcp', caps.copilotCap) + equivOf('pcp', caps.pcpCap);
+  return cabinEquiv + 10 * CRATE_CARTONES; // + las 10 cajas de la caja de carga
+}
 let refillBoundaryClientId = null; // último cliente antes del punto de refill, fijado a mano con "Setear refill"
 let dashRenderToken = 0;
 const DASH_PEDIDOS_CACHE = {}; // week_key -> pedidos[], para no re-pedir semanas ya vistas
@@ -1967,13 +2196,16 @@ async function renderDashboard() {
   // "Refill" es independiente de qué semana/día se esté mirando en el dashboard —
   // es una alerta operativa sobre el día real de hoy, usando los datos en vivo
   // (comparte el mismo TEST_CARGA_WEEK_OFFSET que "Cargar Dino" para poder probar
-  // ambos contra la misma semana de prueba cuando haga falta).
+  // ambos contra la misma semana de prueba cuando haga falta). Compara lo que FALTA
+  // entregar hoy (no lo pedido en total — eso no baja con las entregas) contra la
+  // capacidad del vehículo, que a su vez depende de cuánta gente hay a bordo.
   const banner = document.getElementById('dash-refill-banner');
   if (banner) {
     const refillWeekKey = TEST_CARGA_WEEK_OFFSET === null ? wk.key : getWeekDates(TEST_CARGA_WEEK_OFFSET).key;
     const refillPedidos = TEST_CARGA_WEEK_OFFSET === null ? PEDIDOS : await getDashPedidosForWeek(refillWeekKey);
-    const { totalCartones: todayTotal } = computeDashTotals(todayDefaultDay(), refillWeekKey, refillPedidos);
-    const needsRefill = todayTotal > VEHICLE_CAPACITY_CARTONES;
+    const { remaining } = computeDashTotals(todayDefaultDay(), refillWeekKey, refillPedidos);
+    const todayRemaining = remaining.gsp + remaining.gcp + remaining.pcp / 2;
+    const needsRefill = todayRemaining > vehicleCapacityCartones(PERSONAS_EN_RUTA);
     banner.style.display = needsRefill ? 'flex' : 'none';
     const boundaryEl = document.getElementById('dash-refill-boundary');
     if (needsRefill && boundaryEl) {
@@ -2029,10 +2261,21 @@ function setRefillBoundary(clienteId) {
 const CRATE_CARTONES = 10; // tamaño de una caja en "cartones" (grande=1, chico=0.5 → 20 chicos)
 function capacityOf(sku) { return sku === 'pcp' ? CRATE_CARTONES * 2 : CRATE_CARTONES; }
 function equivOf(sku, qty) { return sku === 'pcp' ? qty * 0.5 : qty; }
+// G-CP y P-CP van envueltos en plástico, G-SP no — nunca se combina una caja parcial
+// "con plástico" con una "sin plástico" en la misma caja física.
+function hasPlastic(sku) { return sku === 'gcp' || sku === 'pcp'; }
 
-function computeLoadPlan(stops) {
-  let copilotLeft = CRATE_CARTONES;           // 1 caja de 10 (copiloto)
-  let backseatLeft = CRATE_CARTONES * 2 * 2;  // 2 cajas de 20 chicos, agrupadas (= 40)
+// cabinCutoffIdx: índice (en `stops`) del cliente del punto de refill, inclusive — a
+// partir de la parada siguiente, la cabina ya no se sigue vaciando en la simulación
+// (en la realidad el repartidor le sigue sacando cartones, pero eso ya pasó esta mañana:
+// lo que haga falta de ahí en más sale directo de la caja de carga). null = sin límite,
+// el día entero puede tocar la cabina (no hay refill, o ya se pasó el punto y el cliente
+// del punto ya no está en `stops` — ver assignLoad).
+function computeLoadPlan(stops, cabinCutoffIdx, caps) {
+  // caps: { copilotCap, pcpCap } — cuánto lugar accesible hay hoy (ver cabinCapsForPersonas,
+  // varía según PERSONAS_EN_RUTA). Sin caps, se asume el vehículo completo (1 persona).
+  let copilotLeft = caps ? caps.copilotCap : CRATE_CARTONES;        // 1 caja de 10 (copiloto)
+  let backseatLeft = caps ? caps.pcpCap : CRATE_CARTONES * 2 * 2;   // 2 cajas de 20 chicos, agrupadas (= 40)
   const bedCrates = []; // en orden de apertura — una sola secuencia por SKU, nunca dos en paralelo
 
   function openBedCrate(sku, capacity) {
@@ -2078,7 +2321,8 @@ function computeLoadPlan(stops) {
   // cliente del punto de refill) sin tener que simular ese tramo por separado.
   const stopCrateCounts = [];
 
-  stops.forEach(s => {
+  stops.forEach((s, i) => {
+    const cabinOpen = cabinCutoffIdx == null || i <= cabinCutoffIdx;
     const nota = s.conf && s.conf.nota;
     const parts = withCafeIfNoted(s.parts, nota);
     const need = { gsp: 0, gcp: 0, pcp: 0 };
@@ -2087,19 +2331,24 @@ function computeLoadPlan(stops) {
     if (need.gsp > 0) consumeFromBed('gsp', CRATE_CARTONES, need.gsp);
 
     if (need.gcp > 0) {
-      const lastGcp = lastOpenCrate('gcp');
-      const bedHasPartial = !!(lastGcp && lastGcp.used < lastGcp.capacity);
-      // Caja llena directo de atrás solo si el pedido llena una caja entera, el
-      // copiloto sigue intacto y no hay ninguna caja de atrás ya empezada esperando.
-      if (need.gcp >= CRATE_CARTONES && copilotLeft === CRATE_CARTONES && !bedHasPartial) {
+      if (!cabinOpen) {
         consumeFromBed('gcp', CRATE_CARTONES, need.gcp);
       } else {
-        consumeFromAccessible('gcp', CRATE_CARTONES, need.gcp, () => copilotLeft, v => { copilotLeft = v; });
+        const lastGcp = lastOpenCrate('gcp');
+        const bedHasPartial = !!(lastGcp && lastGcp.used < lastGcp.capacity);
+        // Caja llena directo de atrás solo si el pedido llena una caja entera, el
+        // copiloto sigue intacto y no hay ninguna caja de atrás ya empezada esperando.
+        if (need.gcp >= CRATE_CARTONES && copilotLeft === CRATE_CARTONES && !bedHasPartial) {
+          consumeFromBed('gcp', CRATE_CARTONES, need.gcp);
+        } else {
+          consumeFromAccessible('gcp', CRATE_CARTONES, need.gcp, () => copilotLeft, v => { copilotLeft = v; });
+        }
       }
     }
 
     if (need.pcp > 0) {
-      consumeFromAccessible('pcp', CRATE_CARTONES * 2, need.pcp, () => backseatLeft, v => { backseatLeft = v; });
+      if (!cabinOpen) consumeFromBed('pcp', CRATE_CARTONES * 2, need.pcp);
+      else consumeFromAccessible('pcp', CRATE_CARTONES * 2, need.pcp, () => backseatLeft, v => { backseatLeft = v; });
     }
 
     stopCrateCounts.push(bedCrates.length);
@@ -2129,22 +2378,18 @@ function splitForRefill(stops, raw, stopCrateCounts) {
 // Rescate de capacidad: el simulador nunca deja más de 1 caja parcial abierta por SKU
 // a la vez, así que si al final del día el total se pasa de 10, lo más que puede haber
 // esperando son 3 parciales (una por G-SP/G-CP/P-CP) — cada una con lugar libre que de
-// otra forma queda desperdiciado. Si combinando esas parciales entran en menos cajas
-// físicas (capacidad = 10 "cartones equivalentes" por caja, grande=1, chico=0.5), se
-// combinan en una sola caja mixta. Las que no encuentran con qué combinarse quedan
-// solas (no son "mixtas" — un solo SKU no cuenta como mezcla).
+// otra forma queda desperdiciado. Solo se intenta combinar cuando hace falta (día que
+// no entra en 10 cajas) — si ya entran todas sueltas, se dejan sueltas. Al combinar,
+// nunca se mezcla una parcial "con plástico" (G-CP/P-CP) con una "sin plástico" (G-SP)
+// en la misma caja física — eso deja a G-SP siempre sola si es la única de su tipo.
 function tryMergePartials(bedCrates) {
   const equiv = c => c.sku === 'pcp' ? c.used * 0.5 : c.used;
   const full = bedCrates.filter(c => c.used >= c.capacity);
   const partials = bedCrates.filter(c => c.used > 0 && c.used < c.capacity);
   if (partials.length < 2) return bedCrates; // nada para combinar
 
-  const totalEquiv = partials.reduce((sum, c) => sum + equiv(c), 0);
-  if (totalEquiv <= 10) {
-    return full.concat([{ mixed: true, contents: partials.map(c => ({ sku: c.sku, qty: c.used })) }]);
-  }
-  // No entran todas juntas en una sola caja — combinar de a pares, lo que más
-  // aproveche el espacio, y dejar sin combinar la que no tenga con qué emparejarse.
+  // Combinar de a pares del mismo tipo de envoltorio, lo que más aproveche el
+  // espacio primero. La que no tenga con qué combinarse queda sola.
   const sorted = partials.slice().sort((a, b) => equiv(b) - equiv(a));
   const used = new Array(sorted.length).fill(false);
   const result = [];
@@ -2152,7 +2397,7 @@ function tryMergePartials(bedCrates) {
     if (used[i]) continue;
     let bestJ = -1, bestSum = -1;
     for (let j = i + 1; j < sorted.length; j++) {
-      if (used[j]) continue;
+      if (used[j] || hasPlastic(sorted[i].sku) !== hasPlastic(sorted[j].sku)) continue;
       const sum = equiv(sorted[i]) + equiv(sorted[j]);
       if (sum <= 10 && sum > bestSum) { bestSum = sum; bestJ = j; }
     }
@@ -2171,13 +2416,23 @@ function tryMergePartials(bedCrates) {
 }
 
 // Arma la asignación final de las 13 cajas: cabina (copiloto, asiento trasero derecho e
-// izquierdo) + hasta 10 de la caja de carga. Las cajas parciales que el simulador deja
-// al final, si combinándolas se arma una caja mixta, van a la cabina en vez de sumar a
-// la caja de carga — el copiloto primero (el más accesible), después el asiento
-// trasero derecho, después el izquierdo — liberando lugar en la caja de carga en vez
-// de ocuparlo. Una parcial que quedó sola (no es mezcla) se queda en su lugar normal.
+// izquierdo) + hasta 10 de la caja de carga. Si el día no entra suelto en 10 cajas, las
+// parciales que el simulador deja al final se combinan (nunca mezclando plástico con
+// sin-plástico) y, si arman una caja mixta, esa va a uno de los asientos traseros —
+// derecho primero, después izquierdo — nunca al copiloto, liberando lugar en la caja
+// de carga en vez de ocuparlo. Si el día entra suelto en 10, no se combina nada: una
+// parcial que quedó sola (no es mezcla) se queda en su lugar normal.
 function assignLoad(stops) {
-  const { bedCrates: raw, copilotLeft, backseatLeft, stopCrateCounts } = computeLoadPlan(stops);
+  // Si el punto de refill todavía está sin entregar hoy, la cabina deja de recibir más
+  // allá de ese cliente (ver cabinCutoffIdx en computeLoadPlan) — así lo que se congela
+  // en BASE_LOAD (recomputeLoadFresh) refleja la cabina tal cual queda justo al
+  // llegar al refill, no el total de todo el día. Una vez que ese cliente ya se entregó
+  // (no aparece más en `stops`), el boundary no se encuentra y esto vuelve a portarse
+  // como un día sin refill (cabinCutoffIdx null, sin límite) para lo que quede del día.
+  const boundaryIdx = refillBoundaryClientId != null ? stops.findIndex(s => s.cliente.id === refillBoundaryClientId) : -1;
+  const cabinCutoffIdx = boundaryIdx !== -1 ? boundaryIdx : null;
+  const caps = cabinCapsForPersonas(PERSONAS_EN_RUTA);
+  const { bedCrates: raw, copilotLeft, backseatLeft, stopCrateCounts } = computeLoadPlan(stops, cabinCutoffIdx, caps);
 
   // Si el día no entra en 10 cajas pero ya se fijó un punto de refill, el primer
   // tramo + las últimas entregas del día (precargadas) reemplazan a la secuencia
@@ -2194,29 +2449,52 @@ function assignLoad(stops) {
     }
   }
 
-  const merged = bedBase.length > 10 ? tryMergePartials(bedBase) : bedBase;
+  // Combinar parciales solo cuando hace falta rescatar lugar (needsCabinRescue): si el
+  // día ya entra suelto en 10 cajas, se deja suelto, aunque haya parciales que
+  // cabrían juntas — no hace falta combinar si hay lugar de sobra. Cuando sí hace
+  // falta, la mezcla nunca va al copiloto (ese asiento es siempre G-CP, nunca una
+  // mezcla de sobras) — solo a uno de los dos asientos traseros.
+  const needsCabinRescue = bedBase.length > 10;
+  const merged = needsCabinRescue ? tryMergePartials(bedBase) : bedBase;
   const mixedCrates = merged.filter(c => c.mixed);
   const singleCrates = merged.filter(c => !c.mixed);
 
-  // Lo que ya se gastó de cada asiento trasero, repartido asumiendo que el derecho se
-  // vacía primero (no hay forma de saber cuál específicamente, la simulación los
-  // agrupa) — simplificación para poder mostrar/usar cada caja física por separado.
-  const backseatUsedTotal = CRATE_CARTONES * 2 * 2 - backseatLeft;
-  const usedRight = Math.min(CRATE_CARTONES * 2, backseatUsedTotal);
-  const usedLeft = Math.max(0, backseatUsedTotal - CRATE_CARTONES * 2);
-
-  const cabin = {
-    copilot: { slot: 'copilot', sku: 'gcp', used: CRATE_CARTONES - copilotLeft, capacity: CRATE_CARTONES },
-    backseat_right: { slot: 'backseat_right', sku: 'pcp', used: usedRight, capacity: CRATE_CARTONES * 2 },
-    backseat_left: { slot: 'backseat_left', sku: 'pcp', used: usedLeft, capacity: CRATE_CARTONES * 2 },
-  };
-  const cabinOrder = ['copilot', 'backseat_right', 'backseat_left'];
-  mixedCrates.slice(0, 3).forEach((m, i) => {
+  // Con 1 sola persona (el repartidor), los dos asientos traseros son P-CP agrupado
+  // (no hay forma de saber cuál se vacía primero, así que se reparte asumiendo que el
+  // derecho se vacía primero — solo para poder mostrar/usar cada caja física por
+  // separado). Con 2 o 3 personas, el copiloto no tiene caja (ese asiento lo ocupa una
+  // persona) y su cupo de G-CP se corre al asiento trasero izquierdo en su lugar — el
+  // derecho sigue siendo P-CP con 2 personas, y deja de usarse también con 3.
+  let cabin;
+  if (PERSONAS_EN_RUTA === 1) {
+    const backseatUsedTotal = caps.pcpCap - backseatLeft;
+    const usedRight = Math.min(CRATE_CARTONES * 2, backseatUsedTotal);
+    const usedLeft = Math.max(0, backseatUsedTotal - CRATE_CARTONES * 2);
+    cabin = {
+      copilot: { slot: 'copilot', sku: 'gcp', used: caps.copilotCap - copilotLeft, capacity: caps.copilotCap },
+      backseat_right: { slot: 'backseat_right', sku: 'pcp', used: usedRight, capacity: CRATE_CARTONES * 2 },
+      backseat_left: { slot: 'backseat_left', sku: 'pcp', used: usedLeft, capacity: CRATE_CARTONES * 2 },
+    };
+  } else {
+    cabin = {
+      copilot: { slot: 'copilot', sku: 'gcp', used: 0, capacity: 0 },
+      backseat_right: { slot: 'backseat_right', sku: 'pcp', used: caps.pcpCap - backseatLeft, capacity: caps.pcpCap },
+      backseat_left: { slot: 'backseat_left', sku: 'gcp', used: caps.copilotCap - copilotLeft, capacity: caps.copilotCap },
+    };
+  }
+  // Las mezclas de parciales solo se mandan a la cabina cuando hace falta rescatar
+  // lugar (needsCabinRescue), y nunca al copiloto (siempre G-CP fijo) — solo a uno de
+  // los asientos traseros, y solo al que tenga caja de verdad hoy (capacity>0): si una
+  // persona lo está ocupando, no hay lugar físico ahí para nada.
+  const cabinOrder = needsCabinRescue
+    ? ['backseat_right', 'backseat_left'].filter(slot => cabin[slot].capacity > 0)
+    : [];
+  mixedCrates.slice(0, cabinOrder.length).forEach((m, i) => {
     cabin[cabinOrder[i]] = { slot: cabinOrder[i], mixed: true, contents: m.contents, capacity: CRATE_CARTONES };
   });
-  // si hubiera más de 3 mezclas (no pasa sin Extras), las que sobran van a la caja de
-  // carga en vez de perderse.
-  const overflowMixed = mixedCrates.slice(3).map(m => ({ mixed: true, contents: m.contents, capacity: CRATE_CARTONES }));
+  // si hubiera más mezclas que asientos con caja disponibles hoy, las que sobran van a
+  // la caja de carga en vez de perderse.
+  const overflowMixed = mixedCrates.slice(cabinOrder.length).map(m => ({ mixed: true, contents: m.contents, capacity: CRATE_CARTONES }));
 
   const bed = singleCrates.concat(overflowMixed).map((c, i) => ({
     slot: 'bed_' + (i + 1), sku: c.sku, mixed: c.mixed, contents: c.contents, used: c.used, capacity: c.capacity
@@ -2228,35 +2506,87 @@ function assignLoad(stops) {
 function allLoadSlots(load) {
   return [load.cabin.copilot, load.cabin.backseat_right, load.cabin.backseat_left].concat(load.bed);
 }
+// Ojo: usa crate.capacity (no la constante CRATE_CARTONES a secas) — una caja mixta
+// puede tener una capacidad distinta de la default, y mergeExtrasIntoLoad() se apoya en
+// esto para no inventar lugar donde no hay.
 function remainingEquiv(crate) {
-  if (crate.mixed) return CRATE_CARTONES - crate.contents.reduce((s, c) => s + equivOf(c.sku, c.qty), 0);
-  return CRATE_CARTONES - equivOf(crate.sku, crate.used);
+  if (crate.mixed) return crate.capacity - crate.contents.reduce((s, c) => s + equivOf(c.sku, c.qty), 0);
+  return equivOf(crate.sku, crate.capacity - crate.used);
 }
 
 // Qué hay HOY en una caja tocada en la pantalla 3D — mismo lenguaje visual (ícono +
 // cantidad) que las fichas del dashboard, mostrado en la franja arriba del vehículo.
+// Con 5 cajas o menos en la caja de carga entran todas en el nivel de abajo (nada
+// apilado encima de otra caja) — las posiciones físicas que se usan son la 2, 4, 6, 8
+// y 10 del modelo (el nivel de arriba, 1/3/5/7/9, queda vacío).
+// Con más de 5 ya no entran en el nivel de abajo solo: siempre se termina de llenar
+// ese nivel primero (2,4,6,8,10, las 5 posiciones) y recién ahí se empieza a apilar
+// arriba — de adelante (posición 1, la más accesible) hacia atrás (3, 5, 7, 9).
+// Esto es la lógica de LLENADO (en qué posición física entra cada caja), que no es lo
+// mismo que el orden de ENTREGA: la primera caja que hace falta en la ruta (la más
+// urgente) se pone en la posición más accesible que quede libre, y la última caja que
+// hace falta (la que menos apuro tiene) termina en la posición menos accesible.
+const SINGLE_LEVEL_BED_ORDER = [2, 4, 6, 8, 10];
+const UPPER_LEVEL_FILL_ORDER = [1, 3, 5, 7, 9];
+function bedPhysicalOrder(bedCount) {
+  if (bedCount <= 5) return SINGLE_LEVEL_BED_ORDER;
+  const upperNeeded = bedCount - 5;
+  return UPPER_LEVEL_FILL_ORDER.slice(0, upperNeeded).concat(SINGLE_LEVEL_BED_ORDER);
+}
+// Índice dentro de load.bed (orden en el que se van a entregar) que le corresponde a la
+// posición física `crateNum` (1..10) del modelo 3D — o -1 si esa posición no se usa hoy.
+function bedLogicalIndexForCrateNum(crateNum, bedCount) {
+  return bedPhysicalOrder(bedCount).indexOf(crateNum);
+}
+
 function loadSlotForCrateName(name) {
   if (!CURRENT_LOAD) return null;
   if (name === 'crate_copilot') return CURRENT_LOAD.cabin.copilot;
   if (name === 'crate_backseat_right') return CURRENT_LOAD.cabin.backseat_right;
   if (name === 'crate_backseat_left') return CURRENT_LOAD.cabin.backseat_left;
   const m = /^crate_bed_(\d+)$/.exec(name);
-  if (m) return CURRENT_LOAD.bed[parseInt(m[1], 10) - 1] || null;
-  return null;
+  if (!m) return null;
+  const idx = bedLogicalIndexForCrateNum(parseInt(m[1], 10), CURRENT_LOAD.bed.length);
+  return idx === -1 ? null : (CURRENT_LOAD.bed[idx] || null);
 }
+// Mismo tamaño que las fichas del dashboard ("Por entregar": skuIcon/dashIconPcp a 72px,
+// .dash-num a 36px/400) — para que los íconos de esta franja no desentonen en escala.
 function crateInfoItemHTML(sku, qty) {
-  const icon = sku === 'pcp' ? dashIconPcp(132) : skuIcon(sku, 150);
+  const icon = sku === 'pcp' ? dashIconPcp(72) : skuIcon(sku, 72);
   const qtyFmt = Number.isInteger(qty) ? qty : qty.toFixed(1);
   return `<div class="crate-info-item"><div class="crate-info-qty">${qtyFmt}</div>${icon}</div>`;
 }
-function showCrateInfo(crateName) {
-  const panel = document.getElementById('crate-info-panel');
-  if (!panel) return;
-  const slot = loadSlotForCrateName(crateName);
-  if (!slot) { panel.innerHTML = ''; return; }
-  panel.innerHTML = slot.mixed
-    ? slot.contents.map(c => crateInfoItemHTML(c.sku, c.qty)).join('')
-    : crateInfoItemHTML(slot.sku, slot.used);
+
+// Mismo tono de la caja en el 3D (CRATE_SKU_COLORS), llevado a un pastel claro mezclando
+// con blanco — para que el fondo de la franja de íconos quede legible y sutil.
+function crateIconsTint(hex) {
+  const r = (hex >> 16) & 0xFF, g = (hex >> 8) & 0xFF, b = hex & 0xFF;
+  const mix = c => Math.round(c + (255 - c) * 0.78);
+  return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
+}
+
+// Franja de íconos al pie del 3D: por defecto, los extra cartones a bordo por SKU
+// (EXTRAS_QTY) bajo el título "Extras a bordo" y fondo blanco. Si hay una caja tocada
+// (selectedCrateName), esos mismos íconos pasan a mostrar el contenido de ESA caja bajo
+// "En esta caja", con el fondo teñido según su SKU — así no hace falta una franja
+// aparte arriba del vehículo solo para mostrar el contenido de una caja tocada.
+function renderCrateIconsPanel() {
+  const panel = document.getElementById('crate-icons-panel');
+  const title = document.getElementById('crate-icons-title');
+  const row = document.getElementById('crate-icons-row');
+  if (!panel || !title || !row) return;
+  const slot = selectedCrateName ? loadSlotForCrateName(selectedCrateName) : null;
+  if (slot) {
+    title.textContent = 'En esta caja';
+    row.innerHTML = slot.mixed
+      ? slot.contents.map(c => crateInfoItemHTML(c.sku, c.qty)).join('')
+      : crateInfoItemHTML(slot.sku, slot.used);
+    panel.style.background = crateIconsTint(CRATE_SKU_COLORS[slot.mixed ? 'mixed' : slot.sku]);
+  } else {
+    title.textContent = 'Extras a bordo';
+    row.innerHTML = ['gsp', 'gcp', 'pcp'].map(sku => crateInfoItemHTML(sku, EXTRAS_QTY[sku] || 0)).join('');
+    panel.style.background = '#fff';
+  }
 }
 
 function resetCrateSku(crateName) {
@@ -2267,6 +2597,13 @@ function resetCrateSku(crateName) {
       n.material.color.copy(n.__origColor);
     }
   });
+}
+
+// Oculta del modelo las cajas que ese día no hace falta cargar (ninguna de las 13 es
+// fija del vehículo) — solo se ven las que "Cargar Dino"/Extras realmente asignaron.
+function setCrateVisible(crateName, visible) {
+  const crate = TRUCK_CRATES[crateName];
+  if (crate) crate.visible = visible;
 }
 
 // Modo "activo" al tocar una caja — se agrega un brillo (emissive) parejo encima del
@@ -2294,16 +2631,26 @@ const CABIN_SLOT_TO_CRATE = { copilot: 'crate_copilot', backseat_right: 'crate_b
 function renderLoadColors(load) {
   Object.keys(CABIN_SLOT_TO_CRATE).forEach(slot => {
     const c = load.cabin[slot];
-    setCrateSku(CABIN_SLOT_TO_CRATE[slot], c.mixed ? 'mixed' : c.sku);
+    const name = CABIN_SLOT_TO_CRATE[slot];
+    const needed = c.mixed ? c.contents.length > 0 : c.used > 0;
+    if (needed) setCrateSku(name, c.mixed ? 'mixed' : c.sku);
+    else resetCrateSku(name);
+    setCrateVisible(name, needed);
   });
   for (let i = 0; i < 10; i++) {
-    const name = 'crate_bed_' + (i + 1);
-    const c = load.bed[i];
+    const crateNum = i + 1;
+    const name = 'crate_bed_' + crateNum;
+    const idx = bedLogicalIndexForCrateNum(crateNum, load.bed.length);
+    const c = idx === -1 ? undefined : load.bed[idx];
     if (c) setCrateSku(name, c.mixed ? 'mixed' : c.sku);
     else resetCrateSku(name);
+    setCrateVisible(name, !!c);
   }
-  const panel = document.getElementById('crate-info-panel');
-  if (panel) panel.innerHTML = ''; // evita mostrar el contenido de una caja ya recalculada
+  // Evita mostrar el contenido de una caja ya recalculada (la identidad/posición de las
+  // cajas puede cambiar al recalcular) — si había una tocada, se deselecciona.
+  if (selectedCrateName) setCrateHighlight(TRUCK_CRATES[selectedCrateName], false);
+  selectedCrateName = null;
+  renderCrateIconsPanel();
 }
 
 // Semana de datos para "Cargar Dino"/Extras/refill: null = semana en vivo (de
@@ -2320,12 +2667,86 @@ async function getCargaDinoStops(day) {
 
 let CURRENT_LOAD = null; // última asignación calculada — null hasta que se corre "Cargar Dino"
 
+// Carga congelada (cabina + caja de carga, extras ya fundidos adentro) tomada en el
+// último "momento de carga" real — Cargar Dino, aplicar Extras, modificar una entrega
+// (ver recomputeLoadFresh). Un recálculo disparado por marcar/reversar una entrega NO
+// vuelve a decidir dónde va cada cosa (ver computeAndStoreLoad/capLoadToReal) — eso
+// inventaría cartones que ya no están, o movería/mezclaría los extras con lo que haya
+// cambiado, aunque esos extras sigan físicamente en la misma caja.
+let BASE_LOAD = null;
+let BASE_LOAD_PERSONAS = null; // cuántas personas había en ruta cuando se congeló BASE_LOAD
+function cloneCrate(c) {
+  return c.mixed ? { ...c, contents: c.contents.map(x => ({ ...x })) } : { ...c };
+}
+function cloneFullLoad(load) {
+  return {
+    cabin: {
+      copilot: cloneCrate(load.cabin.copilot),
+      backseat_right: cloneCrate(load.cabin.backseat_right),
+      backseat_left: cloneCrate(load.cabin.backseat_left),
+    },
+    bed: load.bed.map(cloneCrate),
+    overflow: load.overflow,
+    middleCount: load.middleCount,
+  };
+}
+
+// Topa (nunca mueve de caja, nunca refunde) lo que ya está congelado en BASE_LOAD
+// contra la demanda real de HOY (`freshReal`, recalculado de cero sin congelar nada,
+// así es como se entera de cuánto bajó o subió) — cada caja se queda en su lugar, con
+// su mezcla tal cual estaba; lo único que puede cambiar es cuánto de su parte REAL
+// (nunca la parte "extra", marcada con extraUsed/extraQty) sigue ahí. Si la demanda
+// real total de un SKU bajó (entregas ya hechas), eso se nota acá; si subió de nuevo
+// (se reversó una entrega marcada por error), también puede volver a subir — no es un
+// trinquete de un solo sentido.
+function capLoadToReal(base, freshReal) {
+  const budget = { gcp: 0, gsp: 0, pcp: 0 }; // cuánto necesita HOY cada SKU, de verdad
+  allLoadSlots(freshReal).forEach(c => {
+    if (c.mixed) c.contents.forEach(ct => { budget[ct.sku] += ct.qty; });
+    else if (c.capacity > 0) budget[c.sku] += c.used;
+  });
+  function capCrate(c) {
+    if (c.mixed) {
+      const contents = c.contents.map(ct => {
+        const extra = ct.extraQty || 0;
+        const realPortion = Math.max(0, ct.qty - extra);
+        const used = Math.min(realPortion, budget[ct.sku]);
+        budget[ct.sku] -= used;
+        return { sku: ct.sku, qty: used + extra, extraQty: extra };
+      }).filter(ct => ct.qty > 0);
+      return { ...c, contents };
+    }
+    if (c.capacity === 0) return c; // asiento deshabilitado por PERSONAS_EN_RUTA
+    const extra = c.extraUsed || 0;
+    const realPortion = Math.max(0, c.used - extra);
+    const used = Math.min(realPortion, budget[c.sku]);
+    budget[c.sku] -= used;
+    return { ...c, used: used + extra };
+  }
+  // Cabina primero (se consume primero en el camino real, ver computeLoadPlan), después
+  // la caja de carga en su orden de siempre — define qué caja "pierde" primero cuando
+  // la demanda total baja.
+  const cabin = {
+    copilot: capCrate(base.cabin.copilot),
+    backseat_right: capCrate(base.cabin.backseat_right),
+    backseat_left: capCrate(base.cabin.backseat_left),
+  };
+  const bed = base.bed.map(capCrate).filter(c => c.mixed ? c.contents.length > 0 : c.used > 0);
+  return { cabin, bed, overflow: false, middleCount: base.middleCount };
+}
+
+// Cambia qué asientos existen físicamente como caja (el copiloto deja de ser caja si
+// hay alguien sentado ahí) — eso sí tiene que recalcularse de cero, aunque sea un
+// recálculo del mismo día, por eso BASE_LOAD se invalida cuando cambia.
 async function computeAndStoreLoad() {
   const day = todayDefaultDay();
   const stops = await getCargaDinoStops(day);
-  const load = assignLoad(stops);
-  if (!load.overflow) CURRENT_LOAD = load;
-  return load;
+  const freshReal = assignLoad(stops);
+  if (freshReal.overflow) return freshReal;
+  CURRENT_LOAD = (BASE_LOAD && BASE_LOAD_PERSONAS === PERSONAS_EN_RUTA)
+    ? capLoadToReal(BASE_LOAD, freshReal)
+    : freshReal;
+  return CURRENT_LOAD;
 }
 
 function cargarDinoKeyToday() { return new Date().toISOString().slice(0, 10); }
@@ -2342,73 +2763,126 @@ function markCargarDinoUsedToday() {
   setExtrasEnabled(true);
 }
 
+// "¿Personas en ruta?" — se pregunta cada vez que se toca "Cargar Dino" porque puede
+// cambiar viaje a viaje. Define cuánto lugar de cabina queda libre para cajas (ver
+// cabinCapsForPersonas) — el cupo de G-CP "accesible" (1 caja de 10) nunca desaparece,
+// se corre de asiento (copiloto si va solo el repartidor, asiento trasero izquierdo si
+// no) en vez de perderse; el de P-CP sí se achica con cada persona de más.
+let PERSONAS_EN_RUTA = 1;
+let personasDraft = 1;
+function cabinCapsForPersonas(n) {
+  const copilotCap = CRATE_CARTONES;
+  const pcpCap = n >= 3 ? 0 : (n === 2 ? CRATE_CARTONES * 2 : CRATE_CARTONES * 2 * 2);
+  return { copilotCap, pcpCap };
+}
+function openPersonasOverlay() {
+  if (!TRUCK_CRATES.crate_bed_1) { toast('⚠️ El modelo 3D todavía está cargando'); return; }
+  personasDraft = PERSONAS_EN_RUTA;
+  updatePersonasDisplay();
+  const closeBtn = document.getElementById('personas-close-btn');
+  if (closeBtn && !closeBtn.innerHTML) closeBtn.innerHTML = iconCancel(40);
+  document.getElementById('personas-overlay').classList.add('show');
+}
+function closePersonasOverlay() { document.getElementById('personas-overlay').classList.remove('show'); }
+function updatePersonasDisplay() { document.getElementById('personas-count-display').textContent = personasDraft; }
+function changePersonasDraft(delta) {
+  personasDraft = Math.max(1, Math.min(3, personasDraft + delta));
+  updatePersonasDisplay();
+}
+async function confirmPersonasAndLoad() {
+  PERSONAS_EN_RUTA = personasDraft;
+  closePersonasOverlay();
+  await cargarDinoProceed();
+}
+
 // "Cargar Dino" — calcula el mejor orden de carga de las 13 cajas para lo que queda
 // del día (las entregas ya hechas no cuentan).
-async function cargarDino() {
+async function cargarDinoProceed() {
   if (!TRUCK_CRATES.crate_bed_1) { toast('⚠️ El modelo 3D todavía está cargando'); return; }
 
-  const load = await computeAndStoreLoad();
-  if (load.overflow) {
+  // Reaplica los extras vigentes (EXTRAS_QTY) sobre la base recién calculada — si no,
+  // volver a tocar "Cargar Dino" el mismo día pisaba los extras ya cargados y sin
+  // entregar con una carga en blanco.
+  const { load, overflow, capacityOverflow } = await recomputeLoadFresh();
+  if (overflow) {
     toast('⚠️ Hoy hace falta refill — fijá el punto con "Setear refill" antes de cargar');
     return;
   }
 
-  renderLoadColors(load);
   markCargarDinoUsedToday();
   const mixedCount = allLoadSlots(load).filter(c => c.mixed).length;
-  stickyBanner(`✅ Orden de carga calculado — ${load.bed.length} caja(s) en la caja de carga` +
+  stickyBanner(`✅ Orden de carga calculado — ${load.bed.length} caja${load.bed.length === 1 ? '' : 's'} en el cajón` +
     (mixedCount ? ` (${mixedCount} mixta${mixedCount === 1 ? '' : 's'})` : '') +
-    (load.middleCount ? ` — quedan ${load.middleCount} caja(s) para traer en el refill` : ''));
+    (load.middleCount ? ` — quedan ${load.middleCount} caja${load.middleCount === 1 ? '' : 's'} para traer en el refill` : ''));
+  if (capacityOverflow) showCapacidadExcedida();
+  // La capacidad del vehículo (para el aviso de "hace falta refill") depende de
+  // PERSONAS_EN_RUTA — si cambió, el dashboard tiene que enterarse ahora, no recién en
+  // el próximo refresh de fondo.
+  renderDashboard();
 }
 
-// "Extras" — cartones sueltos que se suben además de lo ya calculado: primero rellenan
-// cajas no llenas de su misma SKU, después cualquier otra caja con lugar (que pasa a
-// ser mixta), y recién si no entra en ninguna se abre una caja nueva — siempre que
-// sigamos dentro de las 13 cajas totales del vehículo. Lo que no entra dispara el
-// aviso de "Capacidad excedida".
-function addExtraToLoad(load, sku, qty) {
-  let remaining = qty;
-  const slots = allLoadSlots(load);
-
-  for (const c of slots) {
-    if (remaining <= 0) break;
-    if (!c.mixed && c.sku === sku && c.used < c.capacity) {
-      const take = Math.min(remaining, c.capacity - c.used);
-      c.used += take;
-      remaining -= take;
+// "Extras" — cartones sueltos que se suben además de lo ya calculado: al momento de
+// cargarlos (ver recomputeLoadFresh), primero rellenan una caja existente con lugar de
+// su misma SKU (cabina incluida), después cualquier otra caja compatible (nunca mezcla
+// con plástico con sin plástico), y recién si no entra en ninguna abre una caja nueva —
+// misma prioridad de siempre. Cada cartón que entra así se marca como "extra"
+// (extraUsed/extraQty) para que capLoadToReal() sepa qué parte de esa caja no hay que
+// tocar nunca en un recálculo disparado por marcar/reversar una entrega.
+function mergeExtrasIntoLoad(load, extrasQty) {
+  let capacityOverflow = false;
+  ['gcp', 'gsp', 'pcp'].forEach(sku => {
+    let remaining = extrasQty[sku] || 0;
+    if (remaining <= 0) return;
+    const slots = allLoadSlots(load);
+    for (const c of slots) {
+      if (remaining <= 0) break;
+      if (!c.mixed && c.sku === sku && c.used < c.capacity) {
+        const take = Math.min(remaining, c.capacity - c.used);
+        c.used += take; c.extraUsed = (c.extraUsed || 0) + take;
+        remaining -= take;
+      }
     }
-  }
-  for (const c of slots) {
-    if (remaining <= 0) break;
-    const room = remainingEquiv(c);
-    if (room <= 0) continue;
-    const takeEquiv = Math.min(equivOf(sku, remaining), room);
-    const takeQty = sku === 'pcp' ? takeEquiv / 0.5 : takeEquiv;
-    if (takeQty <= 0) continue;
-    if (c.mixed) {
-      const existing = c.contents.find(ct => ct.sku === sku);
-      if (existing) existing.qty += takeQty; else c.contents.push({ sku, qty: takeQty });
-    } else if (c.sku !== sku) {
-      const prevSku = c.sku, prevQty = c.used;
-      c.mixed = true;
-      c.contents = [{ sku: prevSku, qty: prevQty }, { sku, qty: takeQty }];
-      delete c.sku; delete c.used;
-      c.capacity = CRATE_CARTONES;
-    } else {
-      continue; // misma SKU pero ya cubierto en el paso anterior
+    for (const c of slots) {
+      if (remaining <= 0) break;
+      if (!c.mixed && c.sku === sku) continue; // mismo sku: ya cubierto en el paso anterior
+      const room = remainingEquiv(c);
+      if (room <= 0) continue;
+      if (c.mixed) { if (hasPlastic(c.contents[0].sku) !== hasPlastic(sku)) continue; }
+      else if (hasPlastic(c.sku) !== hasPlastic(sku)) continue;
+      const takeEquiv = Math.min(equivOf(sku, remaining), room);
+      const takeQty = sku === 'pcp' ? takeEquiv / 0.5 : takeEquiv;
+      if (takeQty <= 0) continue;
+      if (c.mixed) {
+        const existing = c.contents.find(ct => ct.sku === sku);
+        if (existing) { existing.qty += takeQty; existing.extraQty = (existing.extraQty || 0) + takeQty; }
+        else c.contents.push({ sku, qty: takeQty, extraQty: takeQty });
+      } else {
+        const prevSku = c.sku, prevQty = c.used, prevExtra = c.extraUsed || 0;
+        c.mixed = true;
+        c.contents = [{ sku: prevSku, qty: prevQty, extraQty: prevExtra }, { sku, qty: takeQty, extraQty: takeQty }];
+        delete c.sku; delete c.used; delete c.extraUsed;
+        c.capacity = CRATE_CARTONES;
+      }
+      remaining -= takeQty;
     }
-    remaining -= takeQty;
-  }
-  while (remaining > 0 && (3 + load.bed.length) < 13) {
-    const capacity = capacityOf(sku);
-    const used = Math.min(remaining, capacity);
-    load.bed.push({ slot: 'bed_' + (load.bed.length + 1), sku, used, capacity });
-    remaining -= used;
-  }
-  return remaining <= 0; // false si no entró todo
+    while (remaining > 0) {
+      if ((3 + load.bed.length) >= 13) { capacityOverflow = true; break; }
+      const capacity = capacityOf(sku);
+      const used = Math.min(remaining, capacity);
+      load.bed.push({ slot: 'bed_' + (load.bed.length + 1), sku, used, extraUsed: used, capacity });
+      remaining -= used;
+    }
+  });
+  return capacityOverflow;
 }
 
-function showCapacidadExcedida() { document.getElementById('capacidad-excedida-banner').classList.add('show'); }
+// Banner que no se auto-cierra — se queda hasta que el usuario lo cierra a mano con la
+// ×, para avisos que necesitan quedar a la vista (no un toast, que desaparece solo).
+function showBlockingBanner(text) {
+  document.getElementById('capacidad-excedida-text').textContent = text;
+  document.getElementById('capacidad-excedida-banner').classList.add('show');
+}
+function showCapacidadExcedida() { showBlockingBanner('Capacidad excedida'); }
 
 // Los 3 valores van siempre por SKU como el TOTAL vigente, no como "lo que se agrega
 // esta vez" — si se vuelve a abrir "Extras" más tarde en el día, cambiar un número
@@ -2430,6 +2904,26 @@ async function openExtrasOverlay() {
 }
 function closeExtrasOverlay() { document.getElementById('extras-overlay').classList.remove('show'); }
 
+// "Momento de carga" real: recalcula TODO de cero (sin congelar nada) y funde los
+// extras vigentes adentro — acá sí conviene rellenar una caja existente con lugar en
+// vez de abrir una nueva. El resultado queda congelado en BASE_LOAD hasta el próximo
+// momento de carga (otro "Cargar Dino", otro cambio en Extras, un pedido modificado).
+// Usado al tocar "Cargar Dino", al confirmar el overlay de Extras, y cuando un pedido
+// cambia (modificar entrega / entrega flash) — nunca cuando solo se marca o reversa una
+// entrega (eso usa computeAndStoreLoad(), que topa sin reacomodar nada, ver arriba).
+async function recomputeLoadFresh() {
+  const day = todayDefaultDay();
+  const stops = await getCargaDinoStops(day);
+  const load = assignLoad(stops);
+  if (load.overflow) return { load, overflow: true, capacityOverflow: false };
+  const capacityOverflow = mergeExtrasIntoLoad(load, EXTRAS_QTY);
+  BASE_LOAD = cloneFullLoad(load);
+  BASE_LOAD_PERSONAS = PERSONAS_EN_RUTA;
+  CURRENT_LOAD = load;
+  renderLoadColors(load);
+  return { load, overflow: false, capacityOverflow };
+}
+
 async function applyExtras() {
   EXTRAS_QTY = {
     gcp: parseInt(document.getElementById('extras-gcp').value, 10) || 0,
@@ -2437,16 +2931,9 @@ async function applyExtras() {
     pcp: parseInt(document.getElementById('extras-pcp').value, 10) || 0,
   };
   closeExtrasOverlay();
-  // Recalcula la base (sin extras) y vuelve a aplicar los 3 totales vigentes encima,
-  // en vez de sumarlos a lo que ya estuviera cargado de una corrida anterior.
-  const load = await computeAndStoreLoad();
-  if (load.overflow) { toast('⚠️ Hoy hace falta refill — no se puede agregar extras'); return; }
-  let overflow = false;
-  ['gcp', 'gsp', 'pcp'].forEach(sku => {
-    if (EXTRAS_QTY[sku] > 0 && !addExtraToLoad(load, sku, EXTRAS_QTY[sku])) overflow = true;
-  });
-  renderLoadColors(load);
-  if (overflow) showCapacidadExcedida();
+  const { overflow, capacityOverflow } = await recomputeLoadFresh();
+  if (overflow) { toast('⚠️ Hoy hace falta refill — no se puede agregar extras'); return; }
+  if (capacityOverflow) showCapacidadExcedida();
   else toast('✅ Extras agregados');
 }
 
@@ -2474,14 +2961,14 @@ function initNextRowGestures() {
 
 function setActionBar(c) {
   const msgBtn = document.getElementById('msg-btn');
-  const callBtn = document.getElementById('call-btn');
+  const noteBtn = document.getElementById('note-btn');
   const eggBtn = document.getElementById('egg-btn');
   if (!msgBtn || !c) return;
-  const wa = waUrl(c), call = callUrl(c);
+  const wa = waUrl(c);
   msgBtn.disabled = !wa;
   msgBtn.onclick = wa ? () => openMessageOverlay(c.id) : null;
-  callBtn.disabled = !call;
-  callBtn.onclick = call ? () => { window.location.href = call; } : null;
+  noteBtn.disabled = false;
+  noteBtn.onclick = () => openNoteOverlay(c.id);
   eggBtn.onclick = () => onConfirmClick(c.id);
 }
 
@@ -2520,8 +3007,15 @@ function renderMessageOverlay(stop) {
     </div>
     <div class="msg-alt-row">
       <button class="msg-close" onclick="closeMessageOverlay()">${iconCancel(64)}</button>
+      <button class="round-btn" title="Llamar" onclick="callClient(${c.id})" ${callUrl(c) ? '' : 'disabled'}>${iconCall(64)}</button>
       <button class="round-btn" title="Dictar con Whispr Flow en WhatsApp" onclick="openWhatsAppChat(${c.id})">${iconMsgOverlay(64)}</button>
     </div>`;
+}
+function callClient(id) {
+  const c = STOPS_BY_ID[id].cliente;
+  const call = callUrl(c);
+  if (!call) { toast('⚠️ Cliente sin teléfono'); return; }
+  window.location.href = call;
 }
 
 function toggleEditApodo(id) { editingApodo = !editingApodo; renderMessageOverlay(STOPS_BY_ID[id]); }
@@ -2543,6 +3037,154 @@ function openWhatsAppChat(id) {
   const wa = waUrl(c);
   if (!wa) { toast('⚠️ Cliente sin teléfono'); return; }
   openExternal(wa);
+}
+
+// ═══════════════════════════════════════════════
+// Nota / Postponer — overlay abierto desde el ícono de clipboard de la action-bar,
+// mismo target (entrega actual o "próxima" seleccionada) que mensaje/confirmar.
+// ═══════════════════════════════════════════════
+let editingNote = false;
+let noteOverlayClienteId = null;
+
+function openNoteOverlay(clienteId) {
+  const stop = STOPS_BY_ID[clienteId]; if (!stop) return;
+  noteOverlayClienteId = clienteId;
+  editingNote = false;
+  renderNoteOverlay();
+  document.getElementById('note-overlay').classList.add('show');
+}
+function closeNoteOverlay() { document.getElementById('note-overlay').classList.remove('show'); }
+
+function renderNoteOverlay() {
+  const stop = STOPS_BY_ID[noteOverlayClienteId]; if (!stop) return;
+  const c = stop.cliente;
+  document.getElementById('note-overlay-body').innerHTML = editingNote ? `
+    <div class="msg-header">
+      <div class="msg-name">${c.nombre}</div>
+      <button class="msg-close" onclick="closeNoteOverlay()">${iconCancel(48)}</button>
+    </div>
+    <textarea id="note-textarea" class="note-textarea" placeholder="Nota del cliente">${c.notas || ''}</textarea>
+    <div class="note-save-row">
+      <button class="round-btn dark sm" onclick="saveClientNote()">✓</button>
+    </div>` : `
+    <div class="msg-header">
+      <div class="msg-name">${c.nombre}</div>
+      <button class="msg-close" onclick="closeNoteOverlay()">${iconCancel(48)}</button>
+    </div>
+    <div class="note-options">
+      <button class="note-option-btn" onclick="openNoteEditor()">${iconNotePencil(44)}Agregar nota</button>
+      <button class="note-option-btn" onclick="openModificarEntregaOverlay()">${iconSwapOrder(44)}Modificar entrega</button>
+      <button class="note-option-btn" onclick="postponeDelivery()">${iconReschedule(44)}Postponer entrega</button>
+    </div>`;
+}
+
+function openNoteEditor() { editingNote = true; renderNoteOverlay(); }
+
+async function saveClientNote() {
+  const stop = STOPS_BY_ID[noteOverlayClienteId]; if (!stop) return;
+  const c = stop.cliente;
+  const val = document.getElementById('note-textarea').value.trim();
+  try {
+    await sbUpsert('clientes', { ...c, notas: val });
+    c.notas = val;
+    closeNoteOverlay();
+    toast('✅ Nota guardada');
+    render();
+  } catch (e) {
+    console.error(e);
+    toast('⚠️ No se pudo guardar la nota');
+  }
+}
+
+// Mueve al cliente de la ruta del día a "Pickup" (mismo campo clientes.ruta que separa
+// lunes/martes/miércoles/pickup) — la entrega deja de aparecer en la ruta de hoy.
+async function postponeDelivery() {
+  const stop = STOPS_BY_ID[noteOverlayClienteId]; if (!stop) return;
+  const c = stop.cliente;
+  try {
+    await sbUpsert('clientes', { ...c, ruta: 'pickup' });
+    c.ruta = 'pickup';
+    closeNoteOverlay();
+    toast('📦 Entrega movida a Pickup');
+    render();
+    if (document.getElementById('route-overlay').classList.contains('show')) renderRouteOverlay();
+  } catch (e) {
+    console.error(e);
+    toast('⚠️ No se pudo postponer la entrega');
+  }
+}
+
+// "Modificar entrega" — a diferencia de una entrega flash (alguien fuera de la ruta
+// confirmada), esto reescribe lo que YA iba a llevar un cliente de la ruta de hoy, para
+// no duplicarlo como una entrega aparte. Se guarda en conf.fmtOverride (mismo campo que
+// ya lee productBreakdown) — así dashboard, Cargar Dino y la deducción de inventario al
+// marcar la entrega usan automáticamente el total nuevo sin tocar ningún otro lugar.
+let modifyOverlayClienteId = null;
+function openModificarEntregaOverlay() {
+  modifyOverlayClienteId = noteOverlayClienteId;
+  closeNoteOverlay();
+  renderModifyOverlay();
+  document.getElementById('modify-overlay').classList.add('show');
+}
+function closeModifyOverlay() { document.getElementById('modify-overlay').classList.remove('show'); }
+
+function renderModifyOverlay() {
+  const stop = STOPS_BY_ID[modifyOverlayClienteId]; if (!stop) return;
+  const c = stop.cliente;
+  const { gsp, gcp, pcp } = deductionFromParts(stop.parts);
+  document.getElementById('modify-overlay-body').innerHTML = `
+    <div class="route-header">
+      <div class="flash-title">Modificar entrega — ${c.nombre}</div>
+      <button class="round-btn" id="modify-close-btn" title="Cerrar" onclick="closeModifyOverlay()">${iconCancel(40)}</button>
+    </div>
+    <div class="extras-field">
+      <label>Grandes con plástico</label>
+      <input type="number" min="0" inputmode="numeric" id="modify-gcp" value="${gcp}">
+    </div>
+    <div class="extras-field">
+      <label>Grandes sin plástico</label>
+      <input type="number" min="0" inputmode="numeric" id="modify-gsp" value="${gsp}">
+    </div>
+    <div class="extras-field">
+      <label>Pequeños</label>
+      <input type="number" min="0" inputmode="numeric" id="modify-pcp" value="${pcp}">
+    </div>
+    <button class="dash-refill-btn" onclick="saveModificarEntrega()">Guardar cambios</button>`;
+}
+
+async function saveModificarEntrega() {
+  const stop = STOPS_BY_ID[modifyOverlayClienteId]; if (!stop) return;
+  const c = stop.cliente;
+  const gcp = parseInt(document.getElementById('modify-gcp').value, 10) || 0;
+  const gsp = parseInt(document.getElementById('modify-gsp').value, 10) || 0;
+  const pcp = parseInt(document.getElementById('modify-pcp').value, 10) || 0;
+  const key = `${wk.key}_${c.id}`;
+  const conf = CONFIRMACIONES[key];
+  if (!conf) { toast('⚠️ No se encontró la confirmación de este cliente'); return; }
+  // Si el pedido sube, lo que sube sale de los extras ya cargados (hay menos remanente
+  // disponible); si baja, se libera ese lugar de vuelta a los extras — mismo sentido que
+  // una entrega flash consumiendo de EXTRAS_QTY, pero acá puede ir en cualquier dirección.
+  const before = deductionFromParts(stop.parts);
+  conf.fmtOverride = { ...(conf.fmtOverride || {}), fmt_gcp: gcp, fmt_gsp: gsp, fmt_pcp: pcp };
+  const after = { gcp, gsp, pcp };
+  ['gcp', 'gsp', 'pcp'].forEach(sku => {
+    EXTRAS_QTY[sku] = Math.max(0, EXTRAS_QTY[sku] - (after[sku] - before[sku]));
+  });
+  try {
+    await sbUpsert('kv_store', { key: 'CONFIRMACIONES', value: JSON.stringify(CONFIRMACIONES) });
+    closeModifyOverlay();
+    toast('✅ Entrega modificada');
+    // El plan de carga original ya no refleja lo que este cliente va a llevar — se
+    // recalcula desde cero (cabina incluida) ahora mismo, no recién en el próximo
+    // "Cargar Dino".
+    BASE_LOAD = null;
+    if (CURRENT_LOAD) await recomputeLoadFresh();
+    render();
+    if (document.getElementById('route-overlay').classList.contains('show')) renderRouteOverlay();
+  } catch (e) {
+    console.error(e);
+    toast('⚠️ No se pudo guardar el cambio');
+  }
 }
 
 // ═══════════════════════════════════════════════
@@ -2618,6 +3260,17 @@ async function saveFlashDelivery() {
   const addToClientes = document.getElementById('flash-add-crm').checked;
   if (!q30 && !q15) { toast('⚠️ Indicá al menos una cantidad'); return; }
 
+  // La entrega flash sale SIEMPRE de los extras ya cargados (EXTRAS_QTY), nunca de la
+  // demanda real de otros clientes — si pide más de lo que hay cargado de algún SKU,
+  // se bloquea antes de escribir nada (ni pedido, ni inventario, ni EXTRAS_QTY).
+  const gspWant = flashT30 === 'gsp' ? q30 : 0;
+  const gcpWant = flashT30 === 'gcp' ? q30 : 0;
+  const pcpWant = q15;
+  if (gspWant > EXTRAS_QTY.gsp || gcpWant > EXTRAS_QTY.gcp || pcpWant > EXTRAS_QTY.pcp) {
+    showBlockingBanner('⚠️ No hay suficientes cartones extra cargados para esta entrega flash');
+    return;
+  }
+
   const p30 = 5000, p15 = 3000;
   const fmt = [];
   if (q30 > 0) fmt.push({ u: 30, q: q30, p: p30 });
@@ -2644,9 +3297,7 @@ async function saveFlashDelivery() {
     const kv = await sbGet('kv_store', 'key=eq.inventario&select=value');
     let inv = [];
     try { inv = JSON.parse((kv[0] && kv[0].value) || '[]'); } catch (e) { inv = []; }
-    const gsp = flashT30 === 'gsp' ? q30 : 0;
-    const gcp = flashT30 === 'gcp' ? q30 : 0;
-    const pcp = q15;
+    const gsp = gspWant, gcp = gcpWant, pcp = pcpWant;
     inv.push({
       id: Date.now(),
       fecha: new Date().toISOString().split('T')[0],
@@ -2656,6 +3307,13 @@ async function saveFlashDelivery() {
       autoKey: 'inv_' + erKey
     });
     await sbUpsert('kv_store', { key: 'inventario', value: JSON.stringify(inv) });
+
+    // Si ya se estaban cargando extras ese día (EXTRAS_QTY), esta entrega sale de ahí
+    // antes que de cualquier otro lado — el remanente de extras baja, no se suma aparte.
+    EXTRAS_QTY.gsp = Math.max(0, EXTRAS_QTY.gsp - gsp);
+    EXTRAS_QTY.gcp = Math.max(0, EXTRAS_QTY.gcp - gcp);
+    EXTRAS_QTY.pcp = Math.max(0, EXTRAS_QTY.pcp - pcp);
+    if (CURRENT_LOAD) await recomputeLoadFresh();
 
     if (addToClientes) {
       // Rango propio (900000000+) para que un cliente nuevo creado desde acá nunca
@@ -2669,6 +3327,10 @@ async function saveFlashDelivery() {
     }
 
     PEDIDOS.push(pedido);
+    // Misma marca de tiempo que las entregas normales (ver setEntregado) — así
+    // "Entregados" las puede ordenar juntas por orden real de entrega.
+    ENTREGA_TS[`${wk.key}_${erId}`] = ts;
+    sbUpsert('kv_store', { key: 'entrega_ts', value: JSON.stringify(ENTREGA_TS) }).catch(e => console.error(e));
     closeFlashOverlay();
     toast('⚡ Entrega flash registrada');
     render();
@@ -2676,6 +3338,47 @@ async function saveFlashDelivery() {
   } catch (e) {
     console.error(e);
     toast('⚠️ No se pudo guardar la entrega flash');
+  }
+}
+
+// Reversar una entrega flash: se anula (auto_key pasa a empezar con "vr_", lo que la
+// saca de buildQuickStops para siempre — el registro queda en pedidos por las dudas,
+// no se borra) y se devuelve todo lo que consumió: el inventario vuelve a subir, y lo
+// que había salido de los extras cargados (EXTRAS_QTY) vuelve a estar disponible.
+async function reverseFlashDelivery(id) {
+  const pedido = PEDIDOS.find(p => p.id === id && p.es_entrega_rapida);
+  if (!pedido) return;
+  const quick = buildQuickStops(selectedDay).find(q => q.pedido.id === id);
+  if (!quick) return;
+  const { gsp, gcp, pcp } = deductionFromParts(quick.parts);
+  try {
+    const voidedKey = 'vr_' + pedido.auto_key;
+    await sbUpsert('pedidos', { ...pedido, auto_key: voidedKey });
+
+    const kv = await sbGet('kv_store', 'key=eq.inventario&select=value');
+    let inv = [];
+    try { inv = JSON.parse((kv[0] && kv[0].value) || '[]'); } catch (e) { inv = []; }
+    const filtered = inv.filter(i => i.autoKey !== 'inv_' + pedido.auto_key);
+    if (filtered.length !== inv.length) {
+      await sbUpsert('kv_store', { key: 'inventario', value: JSON.stringify(filtered) });
+    }
+
+    EXTRAS_QTY.gsp += gsp;
+    EXTRAS_QTY.gcp += gcp;
+    EXTRAS_QTY.pcp += pcp;
+    if (CURRENT_LOAD) await recomputeLoadFresh();
+
+    const idx = PEDIDOS.findIndex(p => p.id === id);
+    if (idx >= 0) PEDIDOS[idx] = { ...PEDIDOS[idx], auto_key: voidedKey };
+    delete ENTREGA_TS[`${wk.key}_${id}`];
+    sbUpsert('kv_store', { key: 'entrega_ts', value: JSON.stringify(ENTREGA_TS) }).catch(e => console.error(e));
+
+    toast('↩ Entrega flash reversada');
+    render();
+    if (document.getElementById('route-overlay').classList.contains('show')) renderRouteOverlay();
+  } catch (e) {
+    console.error(e);
+    toast('⚠️ No se pudo revertir la entrega flash');
   }
 }
 
@@ -2699,16 +3402,25 @@ function renderRouteOverlay() {
 
   const stops = buildStops(selectedDay);
   const quick = buildQuickStops(selectedDay);
-  const list = routeFilter === 'pendientes' ? stops.filter(s => !s.entregado) : stops.filter(s => s.entregado);
-  // "Entregados" se ordena por orden real de entrega (mas reciente primero), no por el
-  // orden de la ruta — los sin marca de tiempo (entregados antes de este cambio) quedan al final.
-  if (routeFilter === 'entregados') list.sort((a, b) => getEntregaTs(b.cliente.id) - getEntregaTs(a.cliente.id));
-
   // El número mostrado es la posición absoluta dentro del día completo (igual que el
   // contador de la tarjeta principal), no la posición dentro de esta sublista filtrada —
   // si no, al entregarle al #1 la lista de pendientes "reiniciaba" y volvía a empezar en 1.
-  let html = list.map(s => paradaRow(s, stops.findIndex(x => x.cliente.id === s.cliente.id), routeFilter === 'pendientes')).join('');
-  if (routeFilter === 'entregados' && quick.length) html += quick.map(quickParadaRow).join('');
+  let html;
+  if (routeFilter === 'pendientes') {
+    html = stops.filter(s => !s.entregado)
+      .map(s => paradaRow(s, stops.findIndex(x => x.cliente.id === s.cliente.id), true)).join('');
+  } else {
+    // "Entregados" mezcla paradas normales y entregas flash en una sola lista, ordenada
+    // por orden real de entrega (más reciente primero) — una entrega flash recién
+    // registrada aparece arriba de todo, no siempre al final. Los sin marca de tiempo
+    // (entregados antes de este cambio) quedan al final.
+    const combined = stops.filter(s => s.entregado).map(s => ({
+      ts: getEntregaTs(s.cliente.id),
+      html: paradaRow(s, stops.findIndex(x => x.cliente.id === s.cliente.id), false),
+    })).concat(quick.map(q => ({ ts: getEntregaTs(q.pedido.id), html: quickParadaRow(q) })));
+    combined.sort((a, b) => b.ts - a.ts);
+    html = combined.map(x => x.html).join('');
+  }
   if (!html) html = `<div class="empty-state" style="color:rgba(255,255,255,0.5)">${routeFilter === 'pendientes' ? 'No quedan paradas pendientes.' : 'Nada entregado todavía.'}</div>`;
 
   document.getElementById('route-list-body').innerHTML = html;
@@ -2806,6 +3518,7 @@ function quickParadaRow(q) {
     <div class="parada-row${selected}">
       <div class="idx">⚡</div>
       <div class="info" onclick="selectRouteStop('${key}')"><div class="name">${q.nombre}</div><div class="addr">${addrLink(q, addr)}</div>${skuBadges(parts)}</div>
+      <button class="round-btn dark sm" onclick="reverseFlashDelivery(${q.pedido.id})">↩</button>
     </div>`;
 }
 
@@ -2883,6 +3596,7 @@ if (window.visualViewport) {
 
 initPager();
 initCubeSheet();
+initCubeSwipeClose();
 initCubeRotate();
 setExtrasEnabled(extrasAlreadyUsedToday());
 loadAll();
