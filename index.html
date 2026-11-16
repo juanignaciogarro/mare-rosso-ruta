@@ -362,7 +362,11 @@
   #route-overlay .overlay-card { display: flex; flex-direction: column; overflow: hidden; }
   .route-header { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
   .route-pills { display: flex; gap: 6px; flex: 1; flex-wrap: wrap; }
-  .route-list { margin-top: 16px; min-height: 0; flex: 1; overflow-y: auto; }
+  /* overflow-x explícito: dejar overflow-x en "visible" (el default) junto a
+     overflow-y:auto hace que el navegador lo compute como "auto" igual (regla de la
+     spec de CSS Overflow), así que cualquier fila apenas más ancha que el contenedor
+     (un nombre/dirección largo) habilitaba un scroll horizontal que no debería existir. */
+  .route-list { margin-top: 16px; min-height: 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
   .parada-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
   .parada-row + .parada-row { border-top: 1px solid rgba(255,255,255,0.12); }
   .parada-row .idx {
@@ -1174,6 +1178,12 @@ function iconReschedule(size) {
 // ═══════════════════════════════════════════════
 // Load data
 // ═══════════════════════════════════════════════
+// Solo se restaura BASE_LOAD desde kv_store una vez por sesión (la primera carga de
+// página) — loadAll() también corre cada 25s de ahí en más, y para esos polls el
+// estado en memoria ya es el más fresco (lo escribe persistCargaDinoState() apenas
+// cambia); volver a pisarlo con lo que haya en kv_store en cada poll arriesgaría una
+// carrera si un poll llega justo mientras un guardado todavía está en vuelo.
+let CARGA_DINO_STATE_RESTORED = false;
 async function loadAll() {
   try {
     const [clientes, pedidos, kv] = await Promise.all([
@@ -1189,9 +1199,23 @@ async function loadAll() {
       if (row.key === 'ruta_orders') { try { RUTA_ORDERS = JSON.parse(row.value || '{}'); } catch (e) {} }
       if (row.key === 'apodos') { try { APODOS = JSON.parse(row.value || '{}'); } catch (e) {} }
       if (row.key === 'entrega_ts') { try { ENTREGA_TS = JSON.parse(row.value || '{}'); } catch (e) {} }
+      if (row.key === 'carga_dino_state' && !CARGA_DINO_STATE_RESTORED) {
+        try {
+          const saved = JSON.parse(row.value || '{}');
+          if (saved.weekKey === wk.key && saved.baseLoad) {
+            BASE_LOAD = saved.baseLoad;
+            BASE_LOAD_PERSONAS = saved.personas;
+            PERSONAS_EN_RUTA = saved.personas || 1;
+            EXTRAS_QTY = saved.extrasQty || { gcp: 0, gsp: 0, pcp: 0 };
+            refillBoundaryClientId = saved.refillBoundaryClientId ?? null;
+          }
+        } catch (e) {}
+      }
     });
+    CARGA_DINO_STATE_RESTORED = true;
     render();
     if (document.getElementById('route-overlay').classList.contains('show')) renderRouteOverlay();
+    restoreCargaDinoStateIfAny(); // no bloqueante — repinta el 3D si ya había algo cargado
   } catch (e) {
     console.error(e);
     toast('⚠️ Error de conexión — reintentando…');
@@ -1442,38 +1466,97 @@ function closeCubeSheet() {
   pagerIndex = 0;
   document.getElementById('pager').style.transform = `translateX(${-pagerIndex * 50}%)`;
 }
-function initCubeSheet() {
+// El tirador angosto (pegado al borde) hacía que iOS/iPadOS confundiera el arrastre con
+// un gesto propio del sistema (mostrar el Dock/cambiar de app) y la pestaña "desaparecía"
+// a mitad de gesto. Reemplazado por un swipe de pantalla completa, mismo espíritu que el
+// swipe lateral del pager: se decide recién cuando el dedo se mueve más de
+// DIRECTION_LOCK px, y solo si el movimiento es más vertical que horizontal.
+// Deslizar hacia arriba en cualquier parte del dashboard abre la pantalla 3D.
+function initCubeSwipeOpen() {
+  const area = document.getElementById('page-second');
   const sheet = document.getElementById('cube-sheet');
-  const pullTab = document.getElementById('cube-pull-tab');
-  const closeHandle = document.getElementById('cube-sheet-handle');
   const DRAG_THRESHOLD = 70;
-  let startY = null, dy = 0, dragging = false;
+  const DIRECTION_LOCK = 10;
+  let activePointerId = null, startX = null, startY = null, dy = 0, locked = null;
 
-  function bindDrag(handleEl) {
-    handleEl.addEventListener('pointerdown', e => {
-      startY = e.clientY; dy = 0; dragging = true;
+  area.addEventListener('pointerdown', e => {
+    if (activePointerId !== null) return; // segundo dedo — ignorar
+    activePointerId = e.pointerId;
+    startX = e.clientX; startY = e.clientY; dy = 0; locked = null;
+  });
+  area.addEventListener('pointermove', e => {
+    if (e.pointerId !== activePointerId || locked === false) return;
+    const curDy = e.clientY - startY;
+    const curDx = e.clientX - startX;
+    if (locked === null) {
+      if (Math.abs(curDy) > DIRECTION_LOCK || Math.abs(curDx) > DIRECTION_LOCK) {
+        // Solo nos interesa un arrastre claramente vertical Y hacia arriba — si es más
+        // horizontal, o vertical para abajo, se deja pasar tal cual (scroll normal).
+        locked = Math.abs(curDy) > Math.abs(curDx) && curDy < 0;
+      }
+    }
+    if (locked) {
+      e.preventDefault();
       sheet.classList.add('no-anim');
-      handleEl.setPointerCapture(e.pointerId);
-    });
-    handleEl.addEventListener('pointermove', e => {
-      if (!dragging) return;
-      dy = e.clientY - startY;
-      const basePct = cubeSheetOpen ? 0 : 100;
-      const pct = Math.min(100, Math.max(0, basePct + (dy / window.innerHeight) * 100));
+      dy = curDy;
+      const pct = Math.min(100, Math.max(0, 100 + (dy / window.innerHeight) * 100));
       sheet.style.transform = `translateY(${pct}%)`;
-    });
-    const endDrag = () => {
-      if (!dragging) return;
-      dragging = false;
+    }
+  });
+  const endDrag = e => {
+    if (e.pointerId !== activePointerId) return;
+    if (locked) {
       sheet.classList.remove('no-anim');
-      const shouldOpen = cubeSheetOpen ? !(dy > DRAG_THRESHOLD) : dy < -DRAG_THRESHOLD;
-      if (shouldOpen) openCubeSheet(); else closeCubeSheet();
-    };
-    handleEl.addEventListener('pointerup', endDrag);
-    handleEl.addEventListener('pointercancel', endDrag);
-  }
-  bindDrag(pullTab);
-  bindDrag(closeHandle);
+      if (dy < -DRAG_THRESHOLD) openCubeSheet();
+      else sheet.style.transform = 'translateY(100%)'; // no llegó al umbral: vuelve a cerrado
+    }
+    activePointerId = null; locked = null;
+  };
+  area.addEventListener('pointerup', endDrag);
+  area.addEventListener('pointercancel', endDrag);
+}
+// Deslizar hacia abajo cierra la pantalla 3D — pero solo si el arrastre arranca en un
+// lugar donde NO se toca el modelo (ver rayHitsModel): si arrancara sobre él, se
+// confundiría con girarlo/tocar una caja, así que ese caso queda afuera por completo.
+function initCubeSwipeClose() {
+  const sheet = document.getElementById('cube-sheet');
+  const DRAG_THRESHOLD = 70;
+  const DIRECTION_LOCK = 10;
+  let activePointerId = null, startX = null, startY = null, dy = 0, locked = null;
+
+  sheet.addEventListener('pointerdown', e => {
+    if (activePointerId !== null) { locked = false; return; } // segundo dedo (pinch) — no es este gesto
+    activePointerId = e.pointerId;
+    startX = e.clientX; startY = e.clientY; dy = 0; locked = null;
+    if (rayHitsModel(e.clientX, e.clientY)) locked = false;
+  });
+  sheet.addEventListener('pointermove', e => {
+    if (e.pointerId !== activePointerId || locked === false) return;
+    const curDy = e.clientY - startY;
+    const curDx = e.clientX - startX;
+    if (locked === null) {
+      if (Math.abs(curDy) > DIRECTION_LOCK || Math.abs(curDx) > DIRECTION_LOCK) {
+        locked = Math.abs(curDy) > Math.abs(curDx) && curDy > 0;
+      }
+    }
+    if (locked) {
+      sheet.classList.add('no-anim');
+      dy = curDy;
+      const pct = Math.min(100, Math.max(0, (dy / window.innerHeight) * 100));
+      sheet.style.transform = `translateY(${pct}%)`;
+    }
+  });
+  const endDrag = e => {
+    if (e.pointerId !== activePointerId) return;
+    if (locked) {
+      sheet.classList.remove('no-anim');
+      if (dy > DRAG_THRESHOLD) closeCubeSheet();
+      else sheet.style.transform = 'translateY(0)'; // no llegó al umbral: vuelve a abierto
+    }
+    activePointerId = null; locked = null;
+  };
+  sheet.addEventListener('pointerup', endDrag);
+  sheet.addEventListener('pointercancel', endDrag);
 }
 
 // Modelo 3D real (OBJ+MTL exportado de Fusion 360, con las 13 cajas como cuerpos
@@ -1490,6 +1573,10 @@ const CRATE_TAP_PROXIES = { 'low2_ret (1)': 'crate_bed_2' };
 const DEFAULT_CUBE_ROT = { x: 0.3, y: Math.PI - 0.6 };
 const DEFAULT_CUBE_DIST = 5;
 let resetCubeView = () => {}; // se asigna de verdad dentro de initCubeRotate, una vez que existen pivot/camera
+// true si ese punto de pantalla toca el modelo 3D (cualquier parte, no solo una caja) —
+// se asigna de verdad dentro de initCubeRotate. La usa initCubeSwipeClose para que un
+// swipe de cierre nunca se confunda con girar/seleccionar algo del modelo.
+let rayHitsModel = () => false;
 function initCubeRotate() {
   const container = document.getElementById('cube-scene');
 
@@ -1597,6 +1684,10 @@ function initCubeRotate() {
         });
       }
       recolorMatchingSlots(obj, SILVER_PAINT_HEX, BUMPER_HEX, new Set(['Body2:2', 'Body4:1']));
+      // El modelo (assets .obj/.mtl por red) casi siempre termina de cargar DESPUÉS que
+      // loadAll() ya corrió — si ya había algo restaurado de kv_store, recién acá se
+      // puede pintar (antes TRUCK_CRATES todavía no existía).
+      restoreCargaDinoStateIfAny();
     });
   });
 
@@ -1690,6 +1781,16 @@ function initCubeRotate() {
     }
     deselectCrate(); // ninguna caja visible hoy quedó bajo el toque (carrocería, o una caja oculta)
   }
+  rayHitsModel = (clientX, clientY) => {
+    const rect = container.getBoundingClientRect();
+    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) return false;
+    const ndc = new THREE.Vector2(
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -((clientY - rect.top) / rect.height) * 2 + 1
+    );
+    raycaster.setFromCamera(ndc, camera);
+    return raycaster.intersectObject(pivot, true).length > 0;
+  };
   // Tocar cualquier parte en blanco de la pantalla (fuera de la escena 3D, donde el
   // toque corto ya se maneja arriba) también deselecciona.
   document.getElementById('cube-sheet').addEventListener('click', e => {
@@ -2648,6 +2749,36 @@ function cloneFullLoad(load) {
   };
 }
 
+// Guarda BASE_LOAD (y lo que hace falta para reconstruirlo igual: cuántas personas,
+// los extras vigentes, el punto de refill) para que sobreviva cerrar y volver a abrir
+// la app — antes se perdía todo al recargar la página, obligando a tocar "Cargar Dino"
+// de nuevo. Atado a la semana en curso (wk.key): si cambió la semana, este estado ya no
+// corresponde a nada real y loadAll() lo descarta en vez de restaurarlo.
+function persistCargaDinoState() {
+  sbUpsert('kv_store', {
+    key: 'carga_dino_state',
+    value: JSON.stringify({
+      weekKey: wk.key,
+      baseLoad: BASE_LOAD,
+      personas: BASE_LOAD_PERSONAS,
+      extrasQty: EXTRAS_QTY,
+      refillBoundaryClientId,
+    }),
+  }).catch(e => console.error(e));
+}
+// Vuelve a aplicar BASE_LOAD (si hay uno guardado y sigue valiendo para hoy) contra la
+// demanda real actual y repinta el modelo 3D — hace falta que el modelo ya haya
+// terminado de cargar (TRUCK_CRATES poblado) y que loadAll() ya haya restaurado
+// BASE_LOAD desde kv_store; como esas dos cosas terminan en momentos distintos (una es
+// la carga del .obj por three.js, la otra un fetch a Supabase), esta función se llama
+// desde las dos puntas y simplemente no hace nada si la que falta todavía no está lista.
+async function restoreCargaDinoStateIfAny() {
+  if (!BASE_LOAD || !TRUCK_CRATES.crate_bed_1) return;
+  const load = await computeAndStoreLoad();
+  if (load.overflow) return;
+  renderLoadColors(load);
+}
+
 // Topa (nunca mueve de caja, nunca refunde) lo que ya está congelado en BASE_LOAD
 // contra la demanda real de HOY (`freshReal`, recalculado de cero sin congelar nada,
 // así es como se entera de cuánto bajó o subió) — cada caja se queda en su lugar, con
@@ -2878,6 +3009,7 @@ async function recomputeLoadFresh() {
   BASE_LOAD_PERSONAS = PERSONAS_EN_RUTA;
   CURRENT_LOAD = load;
   renderLoadColors(load);
+  persistCargaDinoState(); // para que sobreviva cerrar y volver a abrir la app
   return { load, overflow: false, capacityOverflow };
 }
 
@@ -3394,6 +3526,19 @@ function selectRouteStop(key) {
   routeSelectedKey = (routeSelectedKey === key) ? null : key;
   renderRouteOverlay();
 }
+// Mismo patrón que initNextRowGestures() en la pantalla principal: tocar una fila sin
+// seleccionar la selecciona; tocar la que YA está seleccionada abre Waze hacia ese
+// contacto en vez de deseleccionarla. Antes, tocar la dirección abría Waze directo (vía
+// addrLink) sin pasar por la selección — ya no: las filas de la lista completa ya no
+// usan addrLink, así que cualquier parte de la fila se comporta igual.
+function tapRouteStop(key) {
+  if (key === routeSelectedKey) {
+    const c = routeSelectedContact();
+    if (c) openWaze(c);
+  } else {
+    selectRouteStop(key);
+  }
+}
 function routeSelectedContact() {
   if (!routeSelectedKey) return null;
   const sep = routeSelectedKey.indexOf(':');
@@ -3451,9 +3596,9 @@ function paradaRow(s, i, draggable) {
     <div class="parada-row${selected}" data-client-id="${c.id}">
       <div class="drag-handle">⠿</div>
       <div class="idx">${i + 1}</div>
-      <div class="info" onclick="selectRouteStop('${key}')">
+      <div class="info" onclick="tapRouteStop('${key}')">
         <div class="name">${c.nombre}</div>
-        <div class="addr">${addrLink(c, addr)}</div>
+        <div class="addr">${addr}</div>
         ${skuBadges(parts)}
         ${noteLine(nota)}
       </div>
@@ -3462,7 +3607,7 @@ function paradaRow(s, i, draggable) {
   return `
     <div class="parada-row${selected}">
       <div class="idx">✓</div>
-      <div class="info" onclick="selectRouteStop('${key}')"><div class="name">${c.nombre}</div><div class="addr">${addrLink(c, addr)}</div>${skuBadges(parts)}${noteLine(nota)}</div>
+      <div class="info" onclick="tapRouteStop('${key}')"><div class="name">${c.nombre}</div><div class="addr">${addr}</div>${skuBadges(parts)}${noteLine(nota)}</div>
       <button class="round-btn dark sm" onclick="setEntregado(STOPS_BY_ID[${c.id}], false)">↩</button>
     </div>`;
 }
@@ -3474,7 +3619,7 @@ function quickParadaRow(q) {
   return `
     <div class="parada-row${selected}">
       <div class="idx">⚡</div>
-      <div class="info" onclick="selectRouteStop('${key}')"><div class="name">${q.nombre}</div><div class="addr">${addrLink(q, addr)}</div>${skuBadges(parts)}</div>
+      <div class="info" onclick="tapRouteStop('${key}')"><div class="name">${q.nombre}</div><div class="addr">${addr}</div>${skuBadges(parts)}</div>
       <button class="round-btn dark sm" onclick="reverseFlashDelivery(${q.pedido.id})">↩</button>
     </div>`;
 }
@@ -3552,7 +3697,8 @@ if (window.visualViewport) {
 }
 
 initPager();
-initCubeSheet();
+initCubeSwipeOpen();
+initCubeSwipeClose();
 initCubeRotate();
 setExtrasEnabled(extrasAlreadyUsedToday());
 loadAll();
