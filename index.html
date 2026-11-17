@@ -1493,6 +1493,7 @@ function openCubeSheet() {
   if (cubeSheetOpen) return;
   cubeSheetOpen = true;
   document.getElementById('cube-sheet').style.transform = 'translateY(0)';
+  resizeCubeRenderer(); // #cube-scene pudo medir mal en initCubeRotate() (al cargar, con la pestaña todavía fuera de pantalla) — remedir ahora
   resetCubeView();
   renderCrateIconsPanel();
 }
@@ -1614,6 +1615,12 @@ const CRATE_TAP_PROXIES = { 'low2_ret (1)': 'crate_bed_2' };
 const DEFAULT_CUBE_ROT = { x: 0.3, y: Math.PI - 0.6 };
 const DEFAULT_CUBE_DIST = 5;
 let resetCubeView = () => {}; // se asigna de verdad dentro de initCubeRotate, una vez que existen pivot/camera
+// Vuelve a medir #cube-scene y ajustar el tamaño del renderer — se asigna de verdad dentro
+// de initCubeRotate. Esta corre una sola vez al cargar la página (vía window 'resize'),
+// cuando el cube-sheet todavía está fuera de pantalla (translateY), así que su tamaño
+// medido en ese momento no es confiable; abrir la pestaña vuelve a medir con el layout ya
+// asentado (ver openCubeSheet()).
+let resizeCubeRenderer = () => {};
 function initCubeRotate() {
   const container = document.getElementById('cube-scene');
 
@@ -1737,6 +1744,7 @@ function initCubeRotate() {
   }
   resize();
   window.addEventListener('resize', resize);
+  resizeCubeRenderer = resize;
 
   // Arrastrar con 1 dedo rota; con 2 dedos hace zoom (acerca/aleja la cámara) en vez de
   // dejar que el navegador interprete el pellizco como zoom de página — por eso cada
@@ -1762,7 +1770,7 @@ function initCubeRotate() {
   // Con 2 dedos, cuánto mundo representa 1px de pantalla a la distancia actual de
   // la cámara — para que el paneo siga al dedo 1 a 1, sin importar el zoom.
   function panUnitsPerPixel() {
-    const rect = container.getBoundingClientRect();
+    const rect = renderer.domElement.getBoundingClientRect();
     const h = 2 * camDist * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
     const w = h * camera.aspect;
     return { w: w / rect.width, h: h / rect.height };
@@ -1790,7 +1798,13 @@ function initCubeRotate() {
   }
 
   function handleCrateTap(clientX, clientY) {
-    const rect = container.getBoundingClientRect();
+    // El rect del <canvas> en sí, no el de #cube-scene: #cube-scene tiene padding-top
+    // (deja lugar a "Cargar Dino"/"Extras") y centra el canvas adentro con
+    // align-items:center, así que su propio rect no coincide con dónde está el canvas de
+    // verdad — raycastear contra el rect del contenedor hacía que el punto tocado quedara
+    // sistemáticamente más abajo de lo esperado en el raycast, por lo que había que tocar
+    // un poco ARRIBA de cada caja para seleccionarla.
+    const rect = renderer.domElement.getBoundingClientRect();
     const ndc = new THREE.Vector2(
       ((clientX - rect.left) / rect.width) * 2 - 1,
       -((clientY - rect.top) / rect.height) * 2 + 1
