@@ -408,7 +408,11 @@
   .parada-note .warn { flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
   .drag-handle { cursor: grab; color: rgba(255,255,255,0.4); font-size: 18px; touch-action: none; flex-shrink: 0; }
   .drag-handle:active { cursor: grabbing; }
-  .parada-dragging { opacity: 0.4; }
+  .parada-dragging {
+    z-index: 5; background: var(--ink); border-radius: 14px; margin: 0 -12px; padding: 12px;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.5);
+  }
+  .parada-dragging + .parada-row { border-top-color: transparent; }
   .route-bottom-bar { display: flex; align-items: center; gap: 12px; margin-top: 18px; flex-shrink: 0; }
   .filter-switch { display: flex; background: rgba(255,255,255,0.12); border-radius: 22px; padding: 4px; flex: 1; }
   .filter-switch button {
@@ -761,6 +765,12 @@ let routeFilter = 'pendientes';
 let routeSelectedKey = null; // selection inside the full route list ('c:<clienteId>' or 'q:<pedidoId>'),
                               // used only to target the floating WhatsApp-chat button there — resets
                               // whenever the visible list changes (open overlay, change day, change tab)
+// true mientras se arrastra una fila para reordenar — mientras tanto, renderRouteOverlay()
+// no debe repintar (el poll de 25s llama a renderRouteOverlay() de fondo sin saber si hay
+// un drag en curso; si reemplazara el HTML de la lista a mitad de gesto, la fila que el dedo
+// sigue sosteniendo quedaría huérfana y el código de arrastre la reinsertaría en la lista
+// recién recreada — duplicando esa parada. Ver persistNewOrder(), que sí repinta al soltar).
+let routeDragActive = false;
 let editingApodo = false;
 let STOPS_BY_ID = {};
 const wk = getWeekDates(0);
@@ -1544,11 +1554,13 @@ function initCubeSwipeOpen() {
   area.addEventListener('pointerup', endDrag);
   area.addEventListener('pointercancel', endDrag);
 }
-// Deslizar hacia abajo cierra la pantalla 3D — pero solo si el arrastre arranca en un
-// lugar donde NO se toca el modelo (ver rayHitsModel): si arrancara sobre él, se
-// confundiría con girarlo/tocar una caja, así que ese caso queda afuera por completo.
+// Deslizar hacia abajo cierra la pantalla 3D — pero solo si el arrastre arranca en la
+// franja de arriba (tirador + fila Cargar Dino/Extras). Si pudiera arrancar en cualquier
+// parte, un swipe hacia abajo sobre el modelo (para girarlo o tocar una caja) cerraría
+// la pantalla sin querer.
 function initCubeSwipeClose() {
   const sheet = document.getElementById('cube-sheet');
+  const topZone = document.querySelector('.cube-load-bar');
   const DRAG_THRESHOLD = 70;
   const DIRECTION_LOCK = 10;
   let activePointerId = null, startX = null, startY = null, dy = 0, locked = null;
@@ -1557,7 +1569,7 @@ function initCubeSwipeClose() {
     if (activePointerId !== null) { locked = false; return; } // segundo dedo (pinch) — no es este gesto
     activePointerId = e.pointerId;
     startX = e.clientX; startY = e.clientY; dy = 0; locked = null;
-    if (rayHitsModel(e.clientX, e.clientY)) locked = false;
+    if (e.clientY > topZone.getBoundingClientRect().bottom) locked = false;
   });
   sheet.addEventListener('pointermove', e => {
     if (e.pointerId !== activePointerId || locked === false) return;
@@ -1602,10 +1614,6 @@ const CRATE_TAP_PROXIES = { 'low2_ret (1)': 'crate_bed_2' };
 const DEFAULT_CUBE_ROT = { x: 0.3, y: Math.PI - 0.6 };
 const DEFAULT_CUBE_DIST = 5;
 let resetCubeView = () => {}; // se asigna de verdad dentro de initCubeRotate, una vez que existen pivot/camera
-// true si ese punto de pantalla toca el modelo 3D (cualquier parte, no solo una caja) —
-// se asigna de verdad dentro de initCubeRotate. La usa initCubeSwipeClose para que un
-// swipe de cierre nunca se confunda con girar/seleccionar algo del modelo.
-let rayHitsModel = () => false;
 function initCubeRotate() {
   const container = document.getElementById('cube-scene');
 
@@ -1810,16 +1818,6 @@ function initCubeRotate() {
     }
     deselectCrate(); // ninguna caja visible hoy quedó bajo el toque (carrocería, o una caja oculta)
   }
-  rayHitsModel = (clientX, clientY) => {
-    const rect = container.getBoundingClientRect();
-    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) return false;
-    const ndc = new THREE.Vector2(
-      ((clientX - rect.left) / rect.width) * 2 - 1,
-      -((clientY - rect.top) / rect.height) * 2 + 1
-    );
-    raycaster.setFromCamera(ndc, camera);
-    return raycaster.intersectObject(pivot, true).length > 0;
-  };
   // Tocar cualquier parte en blanco de la pantalla (fuera de la escena 3D, donde el
   // toque corto ya se maneja arriba) también deselecciona.
   document.getElementById('cube-sheet').addEventListener('click', e => {
@@ -3205,7 +3203,7 @@ function renderNoteOverlay() {
       <div class="msg-name">${c.nombre}</div>
       <button class="msg-close" onclick="closeNoteOverlay()">${iconCancel(48)}</button>
     </div>
-    <textarea id="note-textarea" class="note-textarea" placeholder="Nota del cliente">${c.notas || ''}</textarea>
+    <textarea id="note-textarea" class="note-textarea" placeholder="Nota de la entrega">${(stop.conf && stop.conf.nota) || ''}</textarea>
     <div class="note-save-row">
       <button class="round-btn dark sm" onclick="saveClientNote()">✓</button>
     </div>` : `
@@ -3222,16 +3220,23 @@ function renderNoteOverlay() {
 
 function openNoteEditor() { editingNote = true; renderNoteOverlay(); }
 
+// Guarda en CONFIRMACIONES[key].nota — la nota de la CONFIRMACIÓN de este cliente para
+// esta semana (la que se muestra con el ícono de alerta rojo, conf.nota), NO c.notas (esa
+// es la nota de dirección/casa del cliente, que ya se edita aparte y no tiene botón propio
+// en esta pantalla).
 async function saveClientNote() {
   const stop = STOPS_BY_ID[noteOverlayClienteId]; if (!stop) return;
-  const c = stop.cliente;
+  const key = `${wk.key}_${noteOverlayClienteId}`;
+  const conf = CONFIRMACIONES[key];
+  if (!conf) { toast('⚠️ No se encontró la confirmación de este cliente'); return; }
   const val = document.getElementById('note-textarea').value.trim();
+  conf.nota = val;
   try {
-    await sbUpsert('clientes', { ...c, notas: val });
-    c.notas = val;
+    await sbUpsert('kv_store', { key: 'CONFIRMACIONES', value: JSON.stringify(CONFIRMACIONES) });
     closeNoteOverlay();
     toast('✅ Nota guardada');
     render();
+    if (document.getElementById('route-overlay').classList.contains('show')) renderRouteOverlay();
   } catch (e) {
     console.error(e);
     toast('⚠️ No se pudo guardar la nota');
@@ -3537,6 +3542,7 @@ function closeRouteOverlay() { document.getElementById('route-overlay').classLis
 function setRouteFilter(f) { routeFilter = f; routeSelectedKey = null; renderRouteOverlay(); }
 
 function renderRouteOverlay() {
+  if (routeDragActive) return; // hay un drag en curso — se repinta solo al soltar (persistNewOrder)
   initRouteHeaderIcons();
   document.getElementById('route-pills').innerHTML = ['lunes', 'martes', 'miercoles', 'pickup'].map(d =>
     `<button class="day-chip ${d === selectedDay ? 'active' : ''}" onclick="changeDay('${d}')">${DAY_LABEL[d]}</button>`
@@ -3702,36 +3708,85 @@ function quickParadaRow(q) {
 // (iOS/Android), solo con mouse — mismo tipo de limitación de gestos táctiles ya
 // encontrada con el long-press. Arrastre real desde .drag-handle, con
 // setPointerCapture para que el drag siga funcionando aunque el dedo se mueva
-// sobre otras filas, y reordenando el DOM en vivo según la posición del dedo.
+// sobre otras filas.
+//
+// La fila agarrada sigue al dedo de verdad (translateY en cada frame, vía rAF) en vez de
+// solo "saltar" a su nuevo lugar cuando cruza el medio de otra fila — antes no había
+// ningún feedback de arrastre más que la opacidad, así que se sentía tosco/entrecortado.
+// El reacomodo de las demás filas sigue pasando por DOM (insertBefore/appendChild) igual
+// que antes, pero cada vez que eso mueve a la fila arrastrada se mide el salto que eso
+// provocaría y se lo resta al punto de referencia del translateY — así la fila nunca
+// "pega un salto" visual al reordenarse debajo del dedo.
+//
+// El mismo loop de rAF hace autoscroll: si el dedo queda cerca del borde de arriba o abajo
+// de la lista mientras arrastra, la lista se desplaza sola (como al arrastrar cerca del
+// borde de cualquier página), y como el reacomodo corre en cada frame (no solo en
+// pointermove), sigue funcionando aunque el dedo esté quieto mientras la lista scrollea.
 function initRouteDragDrop() {
   const container = document.getElementById('route-list-body');
   const getRows = () => [...container.querySelectorAll('.parada-row[data-client-id]')];
-  let dragRow = null;
+  const AUTOSCROLL_ZONE = 56; // px desde el borde donde arranca el autoscroll
+  const AUTOSCROLL_MAX_SPEED = 14; // px por frame pegado al borde mismo
+  let dragRow = null, dragHandle = null, startY = 0, lastClientY = 0, rafId = null;
+
+  function reorderIfNeeded() {
+    const rows = getRows();
+    const draggedRect = dragRow.getBoundingClientRect();
+    const draggedCenter = draggedRect.top + draggedRect.height / 2;
+    const after = rows.find(r => r !== dragRow && draggedCenter < r.getBoundingClientRect().top + r.getBoundingClientRect().height / 2);
+    const moveTo = (target, insertFn) => {
+      const before = dragRow.getBoundingClientRect();
+      insertFn();
+      const afterMove = dragRow.getBoundingClientRect();
+      startY += (afterMove.top - before.top); // compensa el salto que provocó el reordenamiento
+    };
+    if (after) {
+      if (after.previousElementSibling !== dragRow) moveTo(after, () => container.insertBefore(dragRow, after));
+    } else if (rows[rows.length - 1] !== dragRow) {
+      moveTo(null, () => container.appendChild(dragRow));
+    }
+  }
+
+  function tick() {
+    if (!dragRow) { rafId = null; return; }
+    const rect = container.getBoundingClientRect();
+    const distTop = lastClientY - rect.top;
+    const distBottom = rect.bottom - lastClientY;
+    let scrollBy = 0;
+    if (distTop < AUTOSCROLL_ZONE) scrollBy = -AUTOSCROLL_MAX_SPEED * (1 - Math.max(distTop, 0) / AUTOSCROLL_ZONE);
+    else if (distBottom < AUTOSCROLL_ZONE) scrollBy = AUTOSCROLL_MAX_SPEED * (1 - Math.max(distBottom, 0) / AUTOSCROLL_ZONE);
+    if (scrollBy) container.scrollTop += scrollBy;
+    dragRow.style.transform = `translateY(${lastClientY - startY}px)`;
+    reorderIfNeeded();
+    rafId = requestAnimationFrame(tick);
+  }
 
   container.querySelectorAll('.parada-row[data-client-id] .drag-handle').forEach(handle => {
     handle.addEventListener('pointerdown', e => {
       dragRow = handle.closest('.parada-row');
+      dragHandle = handle;
+      routeDragActive = true;
+      startY = e.clientY; lastClientY = e.clientY;
       dragRow.classList.add('parada-dragging');
+      dragRow.style.position = 'relative';
       handle.setPointerCapture(e.pointerId);
       e.preventDefault();
+      if (!rafId) rafId = requestAnimationFrame(tick);
     });
     handle.addEventListener('pointermove', e => {
-      if (!dragRow) return;
+      if (!dragRow || handle !== dragHandle) return;
       e.preventDefault();
-      const y = e.clientY;
-      const rows = getRows();
-      const after = rows.find(r => r !== dragRow && y < r.getBoundingClientRect().top + r.getBoundingClientRect().height / 2);
-      if (after) {
-        if (after.previousElementSibling !== dragRow) container.insertBefore(dragRow, after);
-      } else if (rows[rows.length - 1] !== dragRow) {
-        container.appendChild(dragRow);
-      }
+      lastClientY = e.clientY;
     });
     const endDrag = e => {
-      if (!dragRow) return;
+      if (!dragRow || handle !== dragHandle) return;
+      if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
       dragRow.classList.remove('parada-dragging');
+      dragRow.style.transform = '';
+      dragRow.style.position = '';
       const newOrder = getRows().map(r => parseInt(r.dataset.clientId));
-      dragRow = null;
+      dragRow = null; dragHandle = null;
+      routeDragActive = false;
       persistNewOrder(newOrder);
     };
     handle.addEventListener('pointerup', endDrag);
