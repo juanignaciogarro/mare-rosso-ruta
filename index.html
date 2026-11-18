@@ -153,7 +153,6 @@
     padding: 10px 20px; border-radius: 20px; cursor: pointer; font-family: inherit; white-space: nowrap;
   }
   .cube-extras-btn { background: var(--cream); }
-  .cube-extras-btn:disabled { opacity: 0.4; cursor: default; }
   .cube-scene {
     flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; touch-action: none;
     padding-top: calc(max(24px, env(safe-area-inset-top)) + 65px); /* despeja el botón "Cargar Dino"/"Extras", que flota encima */
@@ -184,12 +183,16 @@
     border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.08); color: #fff;
     border-radius: 10px; padding: 8px;
   }
-  /* Ancla de 70px (mismo ancho que los input de extras-field) pegada al borde derecho de
+  /* Stepper de +/- alrededor del input de cantidad — mismo round-btn.dark.sm que ya se usa
+     para el de personas, para no inventar un botón nuevo. 166px = 40 (botón) + 8 (gap) +
+     70 (input) + 8 (gap) + 40 (botón), el ancho total de esta fila. */
+  .stepper { display: flex; align-items: center; gap: 8px; }
+  /* Ancla de 166px (mismo ancho que el stepper de extras-field) pegada al borde derecho de
      la fila vía el space-between del contenedor — al centrar el botón adentro de esta
      ancla, su centro horizontal queda alineado con el de los cuadros de cantidad sin
      importar el ancho real del botón (icono redondo o pill de texto). */
   .extras-header { justify-content: space-between; }
-  .extras-center-col { width: 70px; display: flex; justify-content: center; flex-shrink: 0; }
+  .extras-center-col { width: 166px; display: flex; justify-content: center; flex-shrink: 0; }
   .extras-actions-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 16px; }
   .extras-add-btn {
     border: none; background: var(--orange); color: #1a1a1a; font-weight: 800; font-size: 13px;
@@ -227,15 +230,13 @@
   .body-pad {
     flex: 1; min-height: 0; display: flex; flex-direction: column;
     justify-content: space-between; padding: 40px 16px 12px;
-    /* Red de seguridad: en el peor de los casos (pantalla muy chica/angosta, notas muy
-       largas) el contenido puede seguir sin entrar incluso truncando direcciones — que se
-       pueda scrollear hasta acá en vez de quedar inalcanzable es preferible a que quede
-       recortado por "overflow:hidden" del <main>. La action-bar (botones de mensaje/nota/
-       huevo) queda AFUERA de este scroll — ver #content y .action-bar más abajo — así
-       siempre se queda pegada abajo de la pantalla en vez de desplazarse con el resto. */
-    overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none;
+    /* Sin scroll a propósito — la pantalla principal no debe desplazarse. Si algún día el
+       contenido no entra (nota muy larga, pantalla muy chica), se recorta vía el
+       "overflow:hidden" de <main>/.pager-page en vez de volverse scrolleable; la
+       action-bar (mensaje/nota/huevo) igual queda afuera de este bloque — ver #content y
+       .action-bar más abajo — así se queda pegada abajo de la pantalla pase lo que pase. */
+    overflow: hidden;
   }
-  .body-pad::-webkit-scrollbar { display: none; width: 0; height: 0; }
 
   .counter-bar { display: flex; align-items: center; gap: 8px; color: #fff; margin-top: 30px; }
   .counter-pill {
@@ -312,7 +313,7 @@
      desplazarse junto con el resto del contenido cuando éste no entra entero. */
   .action-bar {
     display: flex; align-items: center; gap: 16px; flex-shrink: 0;
-    padding: 10px 16px calc(env(safe-area-inset-bottom) + 10px);
+    padding: 10px 16px calc(env(safe-area-inset-bottom) + 5px);
   }
   .egg-btn { margin-left: auto; }
   /* Centra el chevron sobre el eje vertical del ícono del huevo (el más ancho de los 3),
@@ -404,7 +405,7 @@
   }
   .eta-picker-val {
     width: 72px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-    font-weight: 700; color: #1a1a1a; font-variant-numeric: tabular-nums;
+    font-weight: 700; font-size: 20px; color: #1a1a1a; font-variant-numeric: tabular-nums;
   }
   .msg-textarea {
     width: 100%; background: none; border: none; color: #1a1a1a; font-size: 17px; font-weight: 500;
@@ -466,8 +467,11 @@
     color: var(--orange); font-size: 12px; font-weight: 700;
   }
   .parada-note .warn { flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-  .drag-handle { cursor: grab; color: rgba(255,255,255,0.4); font-size: 18px; touch-action: none; flex-shrink: 0; }
-  .drag-handle:active { cursor: grabbing; }
+  /* Envuelve el tirador y el número de posición en un solo target de arrastre más grande
+     — agarrar cualquiera de los dos (no sólo el tirador angosto) inicia el reordenamiento. */
+  .drag-target { display: flex; align-items: center; gap: 12px; cursor: grab; touch-action: none; }
+  .drag-target:active { cursor: grabbing; }
+  .drag-handle { color: rgba(255,255,255,0.4); font-size: 18px; flex-shrink: 0; }
   .parada-dragging {
     z-index: 5; background: var(--ink); border-radius: 14px; margin: 0 -12px; padding: 12px;
     box-shadow: 0 10px 24px rgba(0,0,0,0.5);
@@ -572,7 +576,7 @@
   <div class="cube-sheet-handle" id="cube-sheet-handle"></div>
   <div class="cube-load-bar">
     <button class="cube-load-btn" onclick="openPersonasOverlay()">Cargar Dino</button>
-    <button class="cube-load-btn cube-extras-btn" id="extras-btn" onclick="openExtrasOverlay()" disabled>Extras</button>
+    <button class="cube-load-btn cube-extras-btn" id="extras-btn" onclick="openExtrasOverlay()">Extras</button>
   </div>
   <div class="cube-scene" id="cube-scene"></div>
   <div class="crate-icons-panel" id="crate-icons-panel">
@@ -604,15 +608,27 @@
     </div>
     <div class="extras-field">
       <label>Grandes sin plástico</label>
-      <input type="number" min="0" inputmode="numeric" id="extras-gsp" value="0">
+      <div class="stepper">
+        <button type="button" class="round-btn dark sm" onclick="stepperNudge('extras-gsp', -1)">−</button>
+        <input type="number" min="0" inputmode="numeric" id="extras-gsp" value="0">
+        <button type="button" class="round-btn dark sm" onclick="stepperNudge('extras-gsp', 1)">+</button>
+      </div>
     </div>
     <div class="extras-field">
       <label>Grandes con plástico</label>
-      <input type="number" min="0" inputmode="numeric" id="extras-gcp" value="0">
+      <div class="stepper">
+        <button type="button" class="round-btn dark sm" onclick="stepperNudge('extras-gcp', -1)">−</button>
+        <input type="number" min="0" inputmode="numeric" id="extras-gcp" value="0">
+        <button type="button" class="round-btn dark sm" onclick="stepperNudge('extras-gcp', 1)">+</button>
+      </div>
     </div>
     <div class="extras-field">
       <label>Pequeños</label>
-      <input type="number" min="0" inputmode="numeric" id="extras-pcp" value="0">
+      <div class="stepper">
+        <button type="button" class="round-btn dark sm" onclick="stepperNudge('extras-pcp', -1)">−</button>
+        <input type="number" min="0" inputmode="numeric" id="extras-pcp" value="0">
+        <button type="button" class="round-btn dark sm" onclick="stepperNudge('extras-pcp', 1)">+</button>
+      </div>
     </div>
     <div class="extras-actions-row">
       <button class="extras-return-btn" onclick="returnExtras()">Regresar extras</button>
@@ -875,11 +891,20 @@ function deductionFromParts(parts) {
 }
 const PROD_LABEL = { gsp: 'G-SP', gcp: 'G-CP', pcp: 'P', psp: 'P-SP', cafe: 'Café' };
 
-// Si la nota de confirmación (o del pedido) menciona una bolsa de café, se agrega el
-// ícono de café a la lista de SKUs a entregar — no hay un campo estructurado para esto.
-// "molido"/"grano"/"340g" también delatan una bolsa de café aunque la nota no diga "café".
+// Café se agrega a la lista de SKUs a entregar si pasa CUALQUIERA de estas dos cosas:
+// (a) "Modificar entrega" le puso una cantidad (conf.fmtOverride.fmt_cafe — ver
+// renderModifyOverlay/saveModificarEntrega, un stepper igual que los de huevo, ahí sí con
+// cantidad real), o (b) la nota de confirmación (o del pedido) menciona una bolsa de café
+// ("molido"/"grano"/"340g" también delatan una aunque la nota no diga "café") — esta vía
+// sigue sin tener cantidad propia, siempre 1 bolsa, como ya era.
+// Acepta tanto un string (nota suelta, como en las entregas flash que no tienen
+// fmtOverride) como el objeto `conf` entero (para poder ver también fmtOverride).
 const CAFE_NOTE_RE = /caf[eé]|molido|grano|340\s*g\b/i;
-function withCafeIfNoted(parts, noteText) {
+function withCafeIfNoted(parts, noteOrConf) {
+  const isConf = noteOrConf && typeof noteOrConf === 'object';
+  const noteText = isConf ? noteOrConf.nota : noteOrConf;
+  const forcedCafeQty = isConf && noteOrConf.fmtOverride ? (noteOrConf.fmtOverride.fmt_cafe || 0) : 0;
+  if (forcedCafeQty > 0) return [...parts, { k: 'cafe', qty: forcedCafeQty }];
   if (noteText && CAFE_NOTE_RE.test(noteText)) return [...parts, { k: 'cafe', qty: 1 }];
   return parts;
 }
@@ -2197,7 +2222,7 @@ function render() {
   const curPendingIdx = pending.findIndex(s => s.cliente.id === c.id);
   const others = pending.slice(curPendingIdx + 1, curPendingIdx + 3);
 
-  const skuHTML = withCafeIfNoted(current.parts, current.conf && current.conf.nota).map(p =>
+  const skuHTML = withCafeIfNoted(current.parts, current.conf).map(p =>
     `<div class="sku"><span class="sku-qty">${p.qty}</span>${skuIcon(p.k)}</div>`
   ).join('');
 
@@ -2233,7 +2258,7 @@ function render() {
               <div class="info">
                 <div class="name">${s.cliente.nombre}</div>
                 <div class="addr">${(s.cliente.zona || '') + (s.cliente.notas ? ' | ' + s.cliente.notas : '')}</div>
-                ${skuBadges(withCafeIfNoted(s.parts, s.conf && s.conf.nota))}
+                ${skuBadges(withCafeIfNoted(s.parts, s.conf))}
                 ${s.conf && s.conf.nota ? `<div class="next-row-note"><span class="warn">${iconNoteWarn(16)}</span>${s.conf.nota}</div>` : ''}
               </div>
             </div>`).join('')}
@@ -2332,8 +2357,7 @@ function computeDashTotals(day, weekKey, pedidosForWeek) {
   const delivered = { gsp: 0, gcp: 0, pcp: 0, cafe: 0 };
   days.forEach(d => {
     buildDashStopsForWeek(d, weekKey, pedidosForWeek).forEach(s => {
-      const nota = s.conf && s.conf.nota;
-      withCafeIfNoted(s.parts, nota).forEach(p => {
+      withCafeIfNoted(s.parts, s.conf).forEach(p => {
         if (ordered[p.k] === undefined) return;
         ordered[p.k] += p.qty;
         if (s.entregado) delivered[p.k] += p.qty;
@@ -2518,8 +2542,7 @@ function computeLoadPlan(stops, cabinCutoffIdx, caps) {
 
   stops.forEach((s, i) => {
     const cabinOpen = cabinCutoffIdx == null || i <= cabinCutoffIdx;
-    const nota = s.conf && s.conf.nota;
-    const parts = withCafeIfNoted(s.parts, nota);
+    const parts = withCafeIfNoted(s.parts, s.conf);
     const need = { gsp: 0, gcp: 0, pcp: 0 };
     parts.forEach(p => { if (need[p.k] !== undefined) need[p.k] += p.qty; });
 
@@ -2987,19 +3010,6 @@ async function computeAndStoreLoad() {
 // Costa Rica (UTC-6) cambia de día a las 6pm hora local, 6 horas antes de la
 // medianoche real. crNow().dateKey ya está anclado a la hora de Costa Rica.
 function cargarDinoKeyToday() { return crNow().dateKey; }
-function extrasAlreadyUsedToday() {
-  try { return localStorage.getItem('huevoruta_cargardino_day') === cargarDinoKeyToday(); }
-  catch (e) { return false; }
-}
-function setExtrasEnabled(enabled) {
-  const btn = document.getElementById('extras-btn');
-  if (btn) btn.disabled = !enabled;
-}
-function markCargarDinoUsedToday() {
-  try { localStorage.setItem('huevoruta_cargardino_day', cargarDinoKeyToday()); } catch (e) {}
-  setExtrasEnabled(true);
-}
-
 // "¿Personas en ruta?" — se pregunta cada vez que se toca "Cargar Dino" porque puede
 // cambiar viaje a viaje. Define cuánto lugar de cabina queda libre para cajas (ver
 // cabinCapsForPersonas) — el cupo de G-CP "accesible" (1 caja de 10) nunca desaparece,
@@ -3046,7 +3056,6 @@ async function cargarDinoProceed() {
     return;
   }
 
-  markCargarDinoUsedToday();
   const mixedCount = allLoadSlots(load).filter(c => c.mixed).length;
   stickyBanner(`✅ Orden de carga calculado — ${load.bed.length} caja${load.bed.length === 1 ? '' : 's'} en el cajón` +
     (mixedCount ? ` (${mixedCount} mixta${mixedCount === 1 ? '' : 's'})` : '') +
@@ -3162,6 +3171,15 @@ async function recomputeLoadFresh() {
   return { load, overflow: false, capacityOverflow };
 }
 
+// Botones +/- de cualquier cuadro de cantidad (extras, modificar entrega) — suben/bajan
+// el input de a 1, nunca por debajo de 0. El input sigue siendo editable a mano (tipear
+// un número grande sigue andando), esto es sólo para no tener que hacerlo.
+function stepperNudge(id, delta) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.value = Math.max(0, (parseInt(el.value, 10) || 0) + delta);
+}
+
 async function applyExtras() {
   EXTRAS_QTY = {
     gcp: parseInt(document.getElementById('extras-gcp').value, 10) || 0,
@@ -3247,7 +3265,9 @@ function closeMessageOverlay() { document.getElementById('message-overlay').clas
 
 function etaMessage(c, minutes) {
   const apodo = getApodo(c.id) || (c.nombre || '').split(' ')[0];
-  return `¡Hola, ${apodo}! En unos ${minutes || 5} minutos estoy llegando con la entrega de huevos. 🍳`;
+  const mins = minutes || 5;
+  const frase = mins === 1 ? 'En 1 minuto' : `En unos ${mins} minutos`;
+  return `¡Hola, ${apodo}! ${frase} estoy llegando con la entrega de huevos. 🍳`;
 }
 function doneMessage(c) {
   const apodo = getApodo(c.id) || (c.nombre || '').split(' ')[0];
@@ -3318,32 +3338,37 @@ function renderMessageOverlay(stop) {
       <button class="round-btn" title="Llamar" onclick="callClient(${c.id})" ${callUrl(c) ? '' : 'disabled'}>${iconCall(64)}</button>
       <button class="round-btn" title="Dictar con Whispr Flow en WhatsApp" onclick="openWhatsAppChat(${c.id})">${iconMsgOverlay(64)}</button>
     </div>`;
-  initEtaLongPress(c.id);
+  initEtaDrag(c.id);
 }
 
 // ═══════════════════════════════════════════════
-// Selector horizontal de minutos — mantener presionado el reloj (ver initEtaLongPress)
+// Selector horizontal de minutos — arrastrar el reloj hacia un lado (ver initEtaDrag)
 // ═══════════════════════════════════════════════
 const ETA_MINUTE_OPTIONS = [1, 2, 3, 4, 5, 10, 15];
 const ETA_PICKER_SLOT = 72; // ancho de cada valor en .eta-picker-val — ver esa clase
-const ETA_PICKER_HOLD_MS = 1000;
-const ETA_PICKER_DRAG_TRIGGER_PX = 8; // mover el dedo esto o más hacia un lado activa el selector sin esperar el segundo
+const ETA_PICKER_DRAG_TRIGGER_PX = 8; // mover el dedo esto o más hacia un lado activa el selector
 
-// Un toque corto en el reloj (sin moverse) va directo al mensaje de 5 minutos
-// (comportamiento de siempre, vía selectMsgTemplate). La tira horizontal aparece apenas
-// se cumple CUALQUIERA de estas dos condiciones, lo que pase primero: (a) el dedo se queda
-// quieto 1s sin soltar, o (b) el dedo se mueve hacia un lado más de
-// ETA_PICKER_DRAG_TRIGGER_PX antes de que se cumpla el segundo — así arrastrar de entrada
-// no obliga a esperar el segundo completo para que el gesto "enganche".
-// Soltar en cualquier punto confirma el valor más cercano al centro en ese momento y pasa
-// directo al mensaje ya armado con esa cantidad de minutos — no hace falta un paso de
-// "confirmar" aparte.
-function initEtaLongPress(clienteId) {
+// Vibración táctil a cada paso mientras se arrastra — Android/Chrome soporta
+// navigator.vibrate(), pero OJO: iOS Safari/WKWebView nunca lo implementó (ninguna
+// versión a la fecha), así que en el iPad esto no hace nada; queda puesto por si corre en
+// otro motor, pero no hay forma de activar el motor de vibración del iPad desde una
+// página web común.
+function hapticTick() {
+  try { if (navigator.vibrate) navigator.vibrate(8); } catch (e) {}
+}
+
+// Un toque corto en el reloj (sin arrastrar) va directo al mensaje de 5 minutos
+// (comportamiento de siempre, vía selectMsgTemplate). Arrastrar el dedo hacia un lado más
+// de ETA_PICKER_DRAG_TRIGGER_PX en cualquier momento activa la tira horizontal — sin
+// espera. Soltar en cualquier punto confirma el valor más cercano al centro en ese
+// momento y pasa directo al mensaje ya armado con esa cantidad de minutos — no hace falta
+// un paso de "confirmar" aparte.
+function initEtaDrag(clienteId) {
   const box = document.getElementById('msg-choice-eta');
   const track = document.getElementById('eta-picker-track');
   if (!box || !track) return;
-  let holdTimer = null, pointerId = null, startX = 0, startIndex = ETA_MINUTE_OPTIONS.indexOf(etaMinutesChosen);
-  let picking = false, liveIndexFloat = startIndex;
+  let pointerId = null, startX = 0, startIndex = ETA_MINUTE_OPTIONS.indexOf(etaMinutesChosen);
+  let picking = false, liveIndexFloat = startIndex, lastNearest = startIndex;
 
   const middle = (ETA_MINUTE_OPTIONS.length - 1) / 2;
   function trackX(idxFloat) { return (middle - idxFloat) * ETA_PICKER_SLOT; }
@@ -3354,15 +3379,17 @@ function initEtaLongPress(clienteId) {
     [...track.children].forEach((el, i) => {
       const dist = Math.abs(i - idxFloat);
       el.style.opacity = Math.max(0.3, 1 - dist * 0.35);
-      el.style.fontSize = Math.max(16, 26 - dist * 5) + 'px';
+      el.style.transform = `scale(${1 + 0.7 * Math.max(0, 1 - dist)})`; // siempre relativo al tamaño original (1), nunca compone sobre el scale del frame anterior — así no crece sin control
       el.style.color = i === nearest ? 'var(--orange-dark)' : '#1a1a1a';
     });
+    if (nearest !== lastNearest) { lastNearest = nearest; hapticTick(); }
   }
 
   function enterPicking() {
     picking = true;
     startIndex = ETA_MINUTE_OPTIONS.indexOf(etaMinutesChosen);
     liveIndexFloat = startIndex;
+    lastNearest = startIndex;
     box.classList.add('picking', 'expanded');
     document.getElementById('msg-choice-done').classList.add('collapsed');
     msgOverlayTemplate = 'eta';
@@ -3389,17 +3416,12 @@ function initEtaLongPress(clienteId) {
     startIndex = ETA_MINUTE_OPTIONS.indexOf(etaMinutesChosen);
     liveIndexFloat = startIndex;
     box.setPointerCapture(pointerId);
-    holdTimer = setTimeout(() => { holdTimer = null; enterPicking(); }, ETA_PICKER_HOLD_MS);
   });
   box.addEventListener('pointermove', e => {
     if (e.pointerId !== pointerId) return;
     if (!picking) {
-      if (holdTimer && Math.abs(e.clientX - startX) >= ETA_PICKER_DRAG_TRIGGER_PX) {
-        clearTimeout(holdTimer); holdTimer = null;
-        enterPicking();
-      } else {
-        return;
-      }
+      if (Math.abs(e.clientX - startX) >= ETA_PICKER_DRAG_TRIGGER_PX) enterPicking();
+      else return;
     }
     e.preventDefault();
     const dx = e.clientX - startX;
@@ -3409,10 +3431,9 @@ function initEtaLongPress(clienteId) {
   const endPress = e => {
     if (e.pointerId !== pointerId) return;
     pointerId = null;
-    if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
     if (picking) { commitPicking(); return; }
-    // Toque corto (se soltó antes de que se cumpliera el segundo): comportamiento de
-    // siempre — ir al mensaje con los minutos vigentes (5 salvo elección previa).
+    // Toque corto (nunca llegó a arrastrar lo suficiente): comportamiento de siempre — ir
+    // al mensaje con los minutos vigentes (5 salvo elección previa).
     selectMsgTemplate('eta');
   };
   box.addEventListener('pointerup', endPress);
@@ -3543,27 +3564,34 @@ function openModificarEntregaOverlay() {
 }
 function closeModifyOverlay() { document.getElementById('modify-overlay').classList.remove('show'); }
 
+// Fila de .extras-field con stepper +/- adentro — misma estructura en Extras y acá, para
+// no repetir el markup de los botones a mano en cada campo.
+function stepperField(label, id, value) {
+  return `
+    <div class="extras-field">
+      <label>${label}</label>
+      <div class="stepper">
+        <button type="button" class="round-btn dark sm" onclick="stepperNudge('${id}', -1)">−</button>
+        <input type="number" min="0" inputmode="numeric" id="${id}" value="${value}">
+        <button type="button" class="round-btn dark sm" onclick="stepperNudge('${id}', 1)">+</button>
+      </div>
+    </div>`;
+}
+
 function renderModifyOverlay() {
   const stop = STOPS_BY_ID[modifyOverlayClienteId]; if (!stop) return;
   const c = stop.cliente;
   const { gsp, gcp, pcp } = deductionFromParts(stop.parts);
+  const cafe = (stop.conf && stop.conf.fmtOverride && stop.conf.fmtOverride.fmt_cafe) || 0;
   document.getElementById('modify-overlay-body').innerHTML = `
     <div class="route-header">
       <div class="flash-title">Modificar entrega — ${c.nombre}</div>
       <button class="round-btn" id="modify-close-btn" title="Cerrar" onclick="closeModifyOverlay()">${iconCancel(40)}</button>
     </div>
-    <div class="extras-field">
-      <label>Grandes con plástico</label>
-      <input type="number" min="0" inputmode="numeric" id="modify-gcp" value="${gcp}">
-    </div>
-    <div class="extras-field">
-      <label>Grandes sin plástico</label>
-      <input type="number" min="0" inputmode="numeric" id="modify-gsp" value="${gsp}">
-    </div>
-    <div class="extras-field">
-      <label>Pequeños</label>
-      <input type="number" min="0" inputmode="numeric" id="modify-pcp" value="${pcp}">
-    </div>
+    ${stepperField('Grandes con plástico', 'modify-gcp', gcp)}
+    ${stepperField('Grandes sin plástico', 'modify-gsp', gsp)}
+    ${stepperField('Pequeños', 'modify-pcp', pcp)}
+    ${stepperField('Café', 'modify-cafe', cafe)}
     <button class="dash-refill-btn" onclick="saveModificarEntrega()">Guardar cambios</button>`;
 }
 
@@ -3573,14 +3601,20 @@ async function saveModificarEntrega() {
   const gcp = parseInt(document.getElementById('modify-gcp').value, 10) || 0;
   const gsp = parseInt(document.getElementById('modify-gsp').value, 10) || 0;
   const pcp = parseInt(document.getElementById('modify-pcp').value, 10) || 0;
+  const cafe = parseInt(document.getElementById('modify-cafe').value, 10) || 0;
   const key = `${wk.key}_${c.id}`;
   const conf = CONFIRMACIONES[key];
   if (!conf) { toast('⚠️ No se encontró la confirmación de este cliente'); return; }
+  // Los 3 campos de huevo en 0 (+ "Incluye café" tildado) arman una entrega de sólo café —
+  // no hay nada en saveModificarEntrega/productBreakdown que lo bloquee, y no hace falta
+  // tocar ninguna columna de la base: todo esto vive adentro de CONFIRMACIONES, un blob
+  // JSON en kv_store, no una tabla con columnas fijas.
+  //
   // Si el pedido sube, lo que sube sale de los extras ya cargados (hay menos remanente
   // disponible); si baja, se libera ese lugar de vuelta a los extras — mismo sentido que
   // una entrega flash consumiendo de EXTRAS_QTY, pero acá puede ir en cualquier dirección.
   const before = deductionFromParts(stop.parts);
-  conf.fmtOverride = { ...(conf.fmtOverride || {}), fmt_gcp: gcp, fmt_gsp: gsp, fmt_pcp: pcp };
+  conf.fmtOverride = { ...(conf.fmtOverride || {}), fmt_gcp: gcp, fmt_gsp: gsp, fmt_pcp: pcp, fmt_cafe: cafe };
   const after = { gcp, gsp, pcp };
   ['gcp', 'gsp', 'pcp'].forEach(sku => {
     EXTRAS_QTY[sku] = Math.max(0, EXTRAS_QTY[sku] - (after[sku] - before[sku]));
@@ -3936,14 +3970,16 @@ function paradaRow(s, i, draggable) {
   const c = s.cliente;
   const addr = (c.zona || '') + (c.notas ? ' — ' + c.notas : '');
   const nota = s.conf && s.conf.nota;
-  const parts = withCafeIfNoted(s.parts, nota);
+  const parts = withCafeIfNoted(s.parts, s.conf);
   const key = 'c:' + c.id;
   const selected = key === routeSelectedKey ? ' selected' : '';
   if (draggable) {
     return `
     <div class="parada-row${selected}" data-client-id="${c.id}">
-      <div class="drag-handle">⠿</div>
-      <div class="idx">${i + 1}</div>
+      <div class="drag-target">
+        <div class="drag-handle">⠿</div>
+        <div class="idx">${i + 1}</div>
+      </div>
       <div class="info" onclick="tapRouteStop('${key}')">
         <div class="name">${c.nombre}</div>
         <div class="addr">${addr}</div>
@@ -3974,7 +4010,8 @@ function quickParadaRow(q) {
 
 // Pointer Events (no HTML5 drag-and-drop): el DnD nativo no dispara en touch
 // (iOS/Android), solo con mouse — mismo tipo de limitación de gestos táctiles ya
-// encontrada con el long-press. Arrastre real desde .drag-handle, con
+// encontrada con el long-press. Arrastre real desde .drag-target (tirador + número de
+// posición, agarrados como un solo target más grande — ver esa clase), con
 // setPointerCapture para que el drag siga funcionando aunque el dedo se mueva
 // sobre otras filas.
 //
@@ -4029,7 +4066,7 @@ function initRouteDragDrop() {
     rafId = requestAnimationFrame(tick);
   }
 
-  container.querySelectorAll('.parada-row[data-client-id] .drag-handle').forEach(handle => {
+  container.querySelectorAll('.parada-row[data-client-id] .drag-target').forEach(handle => {
     handle.addEventListener('pointerdown', e => {
       dragRow = handle.closest('.parada-row');
       dragHandle = handle;
@@ -4049,13 +4086,25 @@ function initRouteDragDrop() {
     const endDrag = e => {
       if (!dragRow || handle !== dragHandle) return;
       if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-      dragRow.classList.remove('parada-dragging');
-      dragRow.style.transform = '';
-      dragRow.style.position = '';
+      reorderIfNeeded(); // una pasada final con la posición exacta de soltar — si el rAF
+      // se llegó a cancelar un frame antes de procesar el último pointermove, esto evita
+      // que la fila quede un paso atrás de donde se soltó de verdad.
+      const settledRow = dragRow;
       const newOrder = getRows().map(r => parseInt(r.dataset.clientId));
       dragRow = null; dragHandle = null;
       routeDragActive = false;
-      persistNewOrder(newOrder);
+      // Que se note que soltar la fila la "deja caer" en su lugar — sin esto, el transform
+      // se borraba de golpe (sin transición) y la fila pegaba un salto invisible/instantáneo
+      // a su posición final, lo que se sentía como si soltar no hubiera hecho nada todavía.
+      settledRow.style.transition = 'transform 0.18s ease';
+      settledRow.style.transform = '';
+      setTimeout(() => {
+        if (dragRow === settledRow) return; // ya se agarró de nuevo para otro arrastre — no pisarle el estado
+        settledRow.classList.remove('parada-dragging');
+        settledRow.style.transition = '';
+        settledRow.style.position = '';
+        persistNewOrder(newOrder);
+      }, 180);
     };
     handle.addEventListener('pointerup', endDrag);
     handle.addEventListener('pointercancel', endDrag);
@@ -4097,7 +4146,6 @@ initPager();
 initCubeSwipeOpen();
 initCubeSwipeClose();
 initCubeRotate();
-setExtrasEnabled(extrasAlreadyUsedToday());
 loadAll();
 setInterval(loadAll, 25000); // mismo espíritu que el auto-sync de 30s del CRM original
 </script>
