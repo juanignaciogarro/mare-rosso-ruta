@@ -7,7 +7,15 @@
 <!-- "Agregar a inicio" en Safari: abre sin la barra de direcciones, como una app -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- "black-translucent" dejaba el contenido debajo de la barra de estado (viewport-fit=cover),
+     y iOS le pone encima su propio degradé para que la hora/batería sigan siendo legibles
+     sobre lo que sea que haya ahí — ese degradé es justo lo que tapaba el selector de
+     semana, y esa franja de arriba también se come el primer toque en vez de pasarlo a la
+     página. "default" hace que iOS reserve esa franja (opaca, sin superponerse al
+     contenido), así que no hay degradé ni robo de toques; env(safe-area-inset-top) pasa a
+     dar 0 en ese modo, y toda la UI ya usa max(Npx, env(...)) con un mínimo fijo, así que
+     sigue viéndose igual. -->
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="huevoruta">
 <meta name="theme-color" content="#F09C53">
 <link rel="manifest" href="manifest.webmanifest">
@@ -57,11 +65,18 @@
   #pager { display: flex; width: 200%; height: 100%; min-height: 0; transform: translateX(-50%); transition: transform 0.3s ease; touch-action: pan-y; }
   #pager.no-anim { transition: none; }
   .pager-page { width: 50%; flex-shrink: 0; height: 100%; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
-  .dash-page {
-    flex: 1; min-height: 0; overflow-y: auto; padding: 24px 20px 24px;
-    padding-top: max(24px, env(safe-area-inset-top));
+  /* Franja fija (no scrollea con el resto) donde vive el selector de semana — antes era
+     la primera fila de .dash-page y scrolleaba con todo lo demás, pegada arriba del todo
+     de la pantalla; ahora tiene su propia banda con una altura fija y el selector queda
+     centrado verticalmente adentro, más fácil de alcanzar con el pulgar. */
+  .dash-header {
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 0 20px;
+    min-height: calc(env(safe-area-inset-top) + 96px);
   }
-  .dash-week-nav { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; }
+  .dash-page {
+    flex: 1; min-height: 0; overflow-y: auto; padding: 8px 20px 24px;
+  }
+  .dash-week-nav { display: flex; align-items: center; gap: 8px; }
   .dash-week-btn { border: none; background: none; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; font-family: inherit; }
   .dash-week-next svg { transform: scaleX(-1); }
   .dash-week-text { margin-left: 8px; font-size: clamp(18px, 5.25vw, 22px); font-weight: 600; color: var(--ink); white-space: nowrap; }
@@ -211,11 +226,13 @@
   }
   .body-pad {
     flex: 1; min-height: 0; display: flex; flex-direction: column;
-    justify-content: space-between; padding: 40px 16px 20px;
+    justify-content: space-between; padding: 40px 16px 12px;
     /* Red de seguridad: en el peor de los casos (pantalla muy chica/angosta, notas muy
        largas) el contenido puede seguir sin entrar incluso truncando direcciones — que se
-       pueda scrollear hasta el botón del huevo en vez de quedar inalcanzable es preferible
-       a que quede recortado por "overflow:hidden" del <main>. */
+       pueda scrollear hasta acá en vez de quedar inalcanzable es preferible a que quede
+       recortado por "overflow:hidden" del <main>. La action-bar (botones de mensaje/nota/
+       huevo) queda AFUERA de este scroll — ver #content y .action-bar más abajo — así
+       siempre se queda pegada abajo de la pantalla en vez de desplazarse con el resto. */
     overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none;
   }
   .body-pad::-webkit-scrollbar { display: none; width: 0; height: 0; }
@@ -290,7 +307,13 @@
     border: none; background: none; padding: 0; display: flex; align-items: center;
     justify-content: center; cursor: pointer; flex-shrink: 0; font-family: inherit;
   }
-  .action-bar { display: flex; align-items: center; gap: 16px; padding: 10px 2px; flex-shrink: 0; }
+  /* Hermana de .body-pad adentro de #content (ver render()), no un hijo más de su scroll
+     — así se queda con un margen fijo del borde de abajo de la pantalla en vez de
+     desplazarse junto con el resto del contenido cuando éste no entra entero. */
+  .action-bar {
+    display: flex; align-items: center; gap: 16px; flex-shrink: 0;
+    padding: 10px 16px calc(env(safe-area-inset-bottom) + 10px);
+  }
   .egg-btn { margin-left: auto; }
   /* Centra el chevron sobre el eje vertical del ícono del huevo (el más ancho de los 3),
      no al ras del borde derecho — si no, al tener menos ancho que el huevo, queda más
@@ -345,7 +368,44 @@
     flex: 1; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); border-radius: 10px;
     padding: 10px; color: #fff; font-size: 15px; font-family: inherit;
   }
-  .msg-bubble { background: #fff; border-radius: 32px; padding: 22px 26px; margin: 18px 0; text-align: center; }
+  /* Selector de plantilla: 2 cajas lado a lado, cada una con su propio ícono (colapsada)
+     y su propio textarea+enviar (expandida) adentro. Animamos flex-basis/flex-grow (no el
+     shorthand "flex", que no es animable parejo) para que, al tocar una, esa pase de 50% a
+     100% y la otra de 50% a 0% al mismo ritmo — una sola transición cubre ambos lados y se
+     ve como una sola animación fluida en vez de 2 por separado. */
+  .msg-picker { display: flex; gap: 10px; margin: 18px 0; align-items: stretch; }
+  .msg-choice {
+    background: #fff; border-radius: 32px; border: none; cursor: pointer; font-family: inherit;
+    flex-grow: 1; flex-shrink: 1; flex-basis: 50%; min-width: 0; overflow: hidden;
+    padding: 22px 16px; display: flex; align-items: center; justify-content: center;
+    transition: flex-basis 0.5s ease, flex-grow 0.5s ease, padding 0.5s ease;
+  }
+  .msg-choice.expanded { flex-basis: 100%; padding: 22px 26px; }
+  .msg-choice.collapsed { flex-basis: 0%; flex-grow: 0; padding-left: 0; padding-right: 0; }
+  .msg-choice-icon { display: flex; align-items: center; justify-content: center; }
+  .msg-choice-full { display: none; width: 100%; flex-direction: column; align-items: center; text-align: center; }
+  .msg-choice.expanded .msg-choice-icon { display: none; }
+  .msg-choice.expanded .msg-choice-full { display: flex; }
+  /* Selector horizontal de minutos (mantener presionado el reloj 1s) — mismo espíritu que
+     el selector vertical de "Set timer" de Control Center en iOS, pero horizontal: una
+     tira de valores que sigue al dedo 1 a 1 mientras se arrastra (sin transition, para que
+     no se sienta atrasada respecto al dedo) y recién al soltar se anima (.snapping) hasta
+     quedar prolijamente centrada en el valor elegido. Mientras se arrastra, sólo se
+     resuelve qué valor está más cerca del centro con fines visuales (ver
+     updateEtaPickerVisual) — recién soltar confirma ese valor.
+     Se muestra en vez de .msg-choice-full mientras dura el gesto; .expanded ya dejó la
+     caja a ancho completo antes de que esto aparezca. */
+  .msg-choice-picker { display: none; width: 100%; height: 64px; position: relative; overflow: hidden; }
+  .msg-choice.picking .msg-choice-icon, .msg-choice.picking .msg-choice-full { display: none; }
+  .msg-choice.picking .msg-choice-picker { display: block; }
+  .eta-picker-track {
+    position: absolute; left: 50%; top: 50%; display: flex; will-change: transform;
+    transition: transform 0.2s ease;
+  }
+  .eta-picker-val {
+    width: 72px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; color: #1a1a1a; font-variant-numeric: tabular-nums;
+  }
   .msg-textarea {
     width: 100%; background: none; border: none; color: #1a1a1a; font-size: 17px; font-weight: 500;
     resize: vertical; min-height: 70px; font-family: inherit; text-align: center;
@@ -479,12 +539,14 @@
 <main>
   <div id="pager">
     <div class="pager-page" id="page-second">
-      <div class="dash-page">
+      <div class="dash-header">
         <div class="dash-week-nav">
           <button class="dash-week-btn" id="dash-week-prev" onclick="shiftDashWeek(-1)" title="Semana anterior"></button>
           <button class="dash-week-btn dash-week-next" id="dash-week-next" onclick="shiftDashWeek(1)" title="Semana siguiente"></button>
           <div class="dash-week-text"><span id="dash-week-range"></span> <span class="dash-week-year" id="dash-week-year"></span></div>
         </div>
+      </div>
+      <div class="dash-page">
         <div class="dash-solicitados">Solicitados</div>
         <div class="dash-total" id="dash-total"></div>
         <div class="dash-title">Por entregar</div>
@@ -1202,6 +1264,20 @@ function iconSwapOrder(size) {
 </svg>`;
 }
 
+function iconClock(size) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 92 92" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="46" cy="46" r="40" fill="#F09C53" stroke="#242021" stroke-width="4"/>
+<path d="M46 26V46L60 54" stroke="#242021" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+}
+
+function iconCheckDone(size) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 92 92" fill="none" xmlns="http://www.w3.org/2000/svg">
+<circle cx="46" cy="46" r="40" fill="#F09C53" stroke="#242021" stroke-width="4"/>
+<path d="M30 47L41 58L63 35" stroke="#242021" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+}
+
 function iconReschedule(size) {
   return `<svg width="${size}" height="${size}" viewBox="0 0 92 92" fill="none" xmlns="http://www.w3.org/2000/svg">
 <circle cx="46" cy="46" r="46" fill="white"/>
@@ -1223,6 +1299,12 @@ function iconReschedule(size) {
 // cambia); volver a pisarlo con lo que haya en kv_store en cada poll arriesgaría una
 // carrera si un poll llega justo mientras un guardado todavía está en vuelo.
 let CARGA_DINO_STATE_RESTORED = false;
+// A qué día (CR) corresponde lo que hay ahora mismo en BASE_LOAD/EXTRAS_QTY en memoria.
+// Si la app se queda abierta de fondo cruzando la medianoche (CR), ningún reload vuelve a
+// correr el bloque de arriba — por eso cada loadAll() (cada 25s) compara esto contra
+// cargarDinoKeyToday() y, si ya es otro día, descarta lo cargado/extras de ayer en vez de
+// dejarlos pegados para siempre.
+let CARGA_DINO_DAY_KEY = null;
 async function loadAll() {
   try {
     const [clientes, pedidos, kv] = await Promise.all([
@@ -1251,7 +1333,21 @@ async function loadAll() {
         } catch (e) {}
       }
     });
-    CARGA_DINO_STATE_RESTORED = true;
+    if (!CARGA_DINO_STATE_RESTORED) {
+      CARGA_DINO_DAY_KEY = cargarDinoKeyToday();
+      CARGA_DINO_STATE_RESTORED = true;
+    } else if (CARGA_DINO_DAY_KEY !== cargarDinoKeyToday()) {
+      // Cambió el día (CR) con la app abierta de fondo — lo que estaba cargado/los extras
+      // de ayer ya no aplican a hoy.
+      BASE_LOAD = null; BASE_LOAD_PERSONAS = null;
+      EXTRAS_QTY = { gcp: 0, gsp: 0, pcp: 0 };
+      refillBoundaryClientId = null;
+      CARGA_DINO_DAY_KEY = cargarDinoKeyToday();
+      if (TRUCK_CRATES.crate_bed_1) {
+        const load = await computeAndStoreLoad();
+        if (!load.overflow) renderLoadColors(load);
+      }
+    }
     render();
     if (document.getElementById('route-overlay').classList.contains('show')) renderRouteOverlay();
     restoreCargaDinoStateIfAny(); // no bloqueante — repinta el 3D si ya había algo cargado
@@ -2144,11 +2240,11 @@ function render() {
         </div>
         <button class="chevron-btn" onclick="openRouteOverlay()" title="Ver ruta completa">${iconClipboard(66)}</button>
       </div>` : `<div class="next-block"><button class="chevron-btn" style="margin-left:auto" onclick="openRouteOverlay()" title="Ver ruta completa">${iconClipboard(66)}</button></div>`}
-      <div class="action-bar">
-        <button id="msg-btn" class="round-btn" title="Mensaje">${iconMessage(90)}</button>
-        <button id="note-btn" class="round-btn" title="Nota">${iconPencil(90)}</button>
-        <button id="egg-btn" class="egg-btn" title="Confirmar entrega">${iconEggConfirm(122)}</button>
-      </div>
+    </div>
+    <div class="action-bar">
+      <button id="msg-btn" class="round-btn" title="Mensaje">${iconMessage(90)}</button>
+      <button id="note-btn" class="round-btn" title="Nota">${iconPencil(90)}</button>
+      <button id="egg-btn" class="egg-btn" title="Confirmar entrega">${iconEggConfirm(122)}</button>
     </div>`;
 
   const active = STOPS_BY_ID[activeStopId] || current;
@@ -3129,22 +3225,63 @@ function setActionBar(c) {
 // ═══════════════════════════════════════════════
 // Message overlay
 // ═══════════════════════════════════════════════
+// null = las 2 cajas a mitad de camino, sin elegir ninguna todavía; 'eta'/'done' = esa
+// caja expandida a todo el ancho y la otra colapsada a 0 — se resetea a null cada vez que
+// se abre el overlay, para no arrancar ya expandido en el mensaje elegido la última vez.
+let msgOverlayTemplate = null;
+
+// Minutos vigentes para el mensaje "en camino" — 5 por defecto (toque corto en el reloj),
+// o lo que se haya elegido en el selector horizontal (mantener presionado). Se resetea
+// cada vez que se abre el overlay, para no arrancar con la elección de la entrega anterior.
+let etaMinutesChosen = 5;
+
 function openMessageOverlay(clienteId) {
   const stop = STOPS_BY_ID[clienteId]; if (!stop) return;
   editingApodo = false;
+  msgOverlayTemplate = null;
+  etaMinutesChosen = 5;
   renderMessageOverlay(stop);
   document.getElementById('message-overlay').classList.add('show');
 }
 function closeMessageOverlay() { document.getElementById('message-overlay').classList.remove('show'); }
 
-function defaultMessage(c) {
+function etaMessage(c, minutes) {
   const apodo = getApodo(c.id) || (c.nombre || '').split(' ')[0];
-  return `¡Hola, ${apodo}! En unos 5 minutos estoy llegando con la entrega de huevos. 🍳`;
+  return `¡Hola, ${apodo}! En unos ${minutes || 5} minutos estoy llegando con la entrega de huevos. 🍳`;
 }
+function doneMessage(c) {
+  const apodo = getApodo(c.id) || (c.nombre || '').split(' ')[0];
+  return `¡Hola, ${apodo}! Ya quedaron los huevos entregados. Los dejamos con el guarda. ¡Muchas gracias! 🍳`;
+}
+
+// Tocar la caja ya elegida (p.ej. para escribir en su textarea) no debe volver a disparar
+// la animación de expansión — sólo cambia algo si de verdad cambia la elección.
+//
+// Importante: esto NUNCA vuelve a llamar a renderMessageOverlay() (que hace
+// innerHTML = ...). Si reconstruyera el HTML, las cajas serían elementos DOM nuevos que
+// nacen YA con la clase final puesta — un navegador no anima una transición CSS cuando el
+// elemento que la tiene recién se crea con ese valor, solo cuando ESE MISMO elemento pasa
+// de un valor a otro. Por eso acá se las toca directo (classList) sobre las cajas que ya
+// están en pantalla, para que haya un "antes" real del que animar.
+function selectMsgTemplate(which) {
+  if (msgOverlayTemplate === which) return;
+  msgOverlayTemplate = which;
+  const eta = document.getElementById('msg-choice-eta');
+  const done = document.getElementById('msg-choice-done');
+  if (!eta || !done) return;
+  eta.classList.remove('expanded', 'collapsed');
+  done.classList.remove('expanded', 'collapsed');
+  if (which === 'eta') { eta.classList.add('expanded'); done.classList.add('collapsed'); }
+  else { done.classList.add('expanded'); eta.classList.add('collapsed'); }
+}
+let currentMsgOverlayClienteId = null;
 
 function renderMessageOverlay(stop) {
   const c = stop.cliente;
+  currentMsgOverlayClienteId = c.id;
   const apodo = getApodo(c.id);
+  const etaClass = msgOverlayTemplate === null ? '' : (msgOverlayTemplate === 'eta' ? 'expanded' : 'collapsed');
+  const doneClass = msgOverlayTemplate === null ? '' : (msgOverlayTemplate === 'done' ? 'expanded' : 'collapsed');
   document.getElementById('message-overlay-body').innerHTML = `
     <div class="msg-header">
       <div class="msg-name">${c.nombre}</div>
@@ -3155,16 +3292,133 @@ function renderMessageOverlay(stop) {
       <input id="apodo-input" value="${apodo}" placeholder="Nombre corto">
       <button class="round-btn dark sm" onclick="confirmApodo(${c.id})">✓</button>
     </div>` : ''}
-    <div class="msg-bubble">
-      <textarea id="msg-textarea" class="msg-textarea">${defaultMessage(c)}</textarea><br>
-      <button class="send-btn" onclick="sendTemplateMessage(${c.id})">${iconSend(52)}</button>
+    <div class="msg-picker">
+      <div class="msg-choice ${etaClass}" id="msg-choice-eta">
+        <div class="msg-choice-icon">${iconClock(40)}</div>
+        <div class="msg-choice-full">
+          <textarea id="msg-textarea-eta" class="msg-textarea">${etaMessage(c, etaMinutesChosen)}</textarea><br>
+          <button class="send-btn" onclick="event.stopPropagation(); sendTemplateMessage(${c.id}, 'eta')">${iconSend(52)}</button>
+        </div>
+        <div class="msg-choice-picker" id="eta-picker">
+          <div class="eta-picker-track" id="eta-picker-track">
+            ${ETA_MINUTE_OPTIONS.map(m => `<div class="eta-picker-val" data-min="${m}">${m}</div>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div class="msg-choice ${doneClass}" id="msg-choice-done" onclick="selectMsgTemplate('done')">
+        <div class="msg-choice-icon">${iconCheckDone(40)}</div>
+        <div class="msg-choice-full">
+          <textarea id="msg-textarea-done" class="msg-textarea">${doneMessage(c)}</textarea><br>
+          <button class="send-btn" onclick="event.stopPropagation(); sendTemplateMessage(${c.id}, 'done')">${iconSend(52)}</button>
+        </div>
+      </div>
     </div>
     <div class="msg-alt-row">
       <button class="msg-close" onclick="closeMessageOverlay()">${iconCancel(64)}</button>
       <button class="round-btn" title="Llamar" onclick="callClient(${c.id})" ${callUrl(c) ? '' : 'disabled'}>${iconCall(64)}</button>
       <button class="round-btn" title="Dictar con Whispr Flow en WhatsApp" onclick="openWhatsAppChat(${c.id})">${iconMsgOverlay(64)}</button>
     </div>`;
+  initEtaLongPress(c.id);
 }
+
+// ═══════════════════════════════════════════════
+// Selector horizontal de minutos — mantener presionado el reloj (ver initEtaLongPress)
+// ═══════════════════════════════════════════════
+const ETA_MINUTE_OPTIONS = [1, 2, 3, 4, 5, 10, 15];
+const ETA_PICKER_SLOT = 72; // ancho de cada valor en .eta-picker-val — ver esa clase
+const ETA_PICKER_HOLD_MS = 1000;
+const ETA_PICKER_DRAG_TRIGGER_PX = 8; // mover el dedo esto o más hacia un lado activa el selector sin esperar el segundo
+
+// Un toque corto en el reloj (sin moverse) va directo al mensaje de 5 minutos
+// (comportamiento de siempre, vía selectMsgTemplate). La tira horizontal aparece apenas
+// se cumple CUALQUIERA de estas dos condiciones, lo que pase primero: (a) el dedo se queda
+// quieto 1s sin soltar, o (b) el dedo se mueve hacia un lado más de
+// ETA_PICKER_DRAG_TRIGGER_PX antes de que se cumpla el segundo — así arrastrar de entrada
+// no obliga a esperar el segundo completo para que el gesto "enganche".
+// Soltar en cualquier punto confirma el valor más cercano al centro en ese momento y pasa
+// directo al mensaje ya armado con esa cantidad de minutos — no hace falta un paso de
+// "confirmar" aparte.
+function initEtaLongPress(clienteId) {
+  const box = document.getElementById('msg-choice-eta');
+  const track = document.getElementById('eta-picker-track');
+  if (!box || !track) return;
+  let holdTimer = null, pointerId = null, startX = 0, startIndex = ETA_MINUTE_OPTIONS.indexOf(etaMinutesChosen);
+  let picking = false, liveIndexFloat = startIndex;
+
+  const middle = (ETA_MINUTE_OPTIONS.length - 1) / 2;
+  function trackX(idxFloat) { return (middle - idxFloat) * ETA_PICKER_SLOT; }
+
+  function updateVisual(idxFloat) {
+    track.style.transform = `translate(calc(-50% + ${trackX(idxFloat)}px), -50%)`;
+    const nearest = Math.round(idxFloat);
+    [...track.children].forEach((el, i) => {
+      const dist = Math.abs(i - idxFloat);
+      el.style.opacity = Math.max(0.3, 1 - dist * 0.35);
+      el.style.fontSize = Math.max(16, 26 - dist * 5) + 'px';
+      el.style.color = i === nearest ? 'var(--orange-dark)' : '#1a1a1a';
+    });
+  }
+
+  function enterPicking() {
+    picking = true;
+    startIndex = ETA_MINUTE_OPTIONS.indexOf(etaMinutesChosen);
+    liveIndexFloat = startIndex;
+    box.classList.add('picking', 'expanded');
+    document.getElementById('msg-choice-done').classList.add('collapsed');
+    msgOverlayTemplate = 'eta';
+    track.style.transition = 'none';
+    updateVisual(liveIndexFloat);
+  }
+
+  function commitPicking() {
+    picking = false;
+    const idx = Math.max(0, Math.min(ETA_MINUTE_OPTIONS.length - 1, Math.round(liveIndexFloat)));
+    etaMinutesChosen = ETA_MINUTE_OPTIONS[idx];
+    track.style.transition = '';
+    updateVisual(idx);
+    const ta = document.getElementById('msg-textarea-eta');
+    if (ta) ta.value = etaMessage(STOPS_BY_ID[clienteId].cliente, etaMinutesChosen);
+    box.classList.remove('picking');
+  }
+
+  box.addEventListener('pointerdown', e => {
+    if (box.classList.contains('expanded') && !picking) return; // ya expandida mostrando el mensaje — dejar pasar el toque (textarea/enviar)
+    if (pointerId !== null) return;
+    pointerId = e.pointerId;
+    startX = e.clientX;
+    startIndex = ETA_MINUTE_OPTIONS.indexOf(etaMinutesChosen);
+    liveIndexFloat = startIndex;
+    box.setPointerCapture(pointerId);
+    holdTimer = setTimeout(() => { holdTimer = null; enterPicking(); }, ETA_PICKER_HOLD_MS);
+  });
+  box.addEventListener('pointermove', e => {
+    if (e.pointerId !== pointerId) return;
+    if (!picking) {
+      if (holdTimer && Math.abs(e.clientX - startX) >= ETA_PICKER_DRAG_TRIGGER_PX) {
+        clearTimeout(holdTimer); holdTimer = null;
+        enterPicking();
+      } else {
+        return;
+      }
+    }
+    e.preventDefault();
+    const dx = e.clientX - startX;
+    liveIndexFloat = Math.max(0, Math.min(ETA_MINUTE_OPTIONS.length - 1, startIndex - dx / ETA_PICKER_SLOT));
+    updateVisual(liveIndexFloat);
+  });
+  const endPress = e => {
+    if (e.pointerId !== pointerId) return;
+    pointerId = null;
+    if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+    if (picking) { commitPicking(); return; }
+    // Toque corto (se soltó antes de que se cumpliera el segundo): comportamiento de
+    // siempre — ir al mensaje con los minutos vigentes (5 salvo elección previa).
+    selectMsgTemplate('eta');
+  };
+  box.addEventListener('pointerup', endPress);
+  box.addEventListener('pointercancel', endPress);
+}
+
 function callClient(id) {
   const c = STOPS_BY_ID[id].cliente;
   const call = callUrl(c);
@@ -3179,9 +3433,9 @@ function confirmApodo(id) {
   editingApodo = false;
   renderMessageOverlay(STOPS_BY_ID[id]);
 }
-function sendTemplateMessage(id) {
+function sendTemplateMessage(id, which) {
   const c = STOPS_BY_ID[id].cliente;
-  const text = document.getElementById('msg-textarea').value;
+  const text = document.getElementById('msg-textarea-' + which).value;
   const wa = waUrl(c);
   if (!wa) { toast('⚠️ Cliente sin teléfono'); return; }
   openExternal(wa + '?text=' + encodeURIComponent(text));
