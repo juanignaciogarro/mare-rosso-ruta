@@ -80,7 +80,15 @@
   .dash-page {
     flex: 1; min-height: 0; overflow-y: auto; padding: 20px 20px 24px;
   }
-  .dash-week-nav { display: flex; align-items: center; gap: 8px; align-self: center; margin-bottom: 22px; }
+  /* Transform/opacity (no layout) para que moverlas no cambie el alto real de
+     .dash-header — positionCubeSheet()/setDashHeaderCollapsed() miden la posición ya
+     trasladada de #dash-pills con getBoundingClientRect(), que sí ve el transform.
+     Misma duración/easing que la transición de .cube-sheet para que las tres cosas
+     (selector de semana, filtros, hoja 3D) se sientan como una sola animación. */
+  .dash-week-nav {
+    display: flex; align-items: center; gap: 8px; align-self: center; margin-bottom: 22px;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+  }
   .dash-week-btn { border: none; background: none; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; font-family: inherit; }
   .dash-week-next svg { transform: scaleX(-1); }
   .dash-week-text { margin-left: 8px; font-size: clamp(18px, 5.25vw, 22px); font-weight: 600; color: var(--ink); white-space: nowrap; }
@@ -89,7 +97,7 @@
   .dash-solicitados { margin-bottom: 2px; }
   .dash-total { font-size: clamp(38px, 11vw, 52px); font-weight: 500; color: #F0B953; margin-bottom: 20px; }
   .dash-title { margin-bottom: 18px; }
-  .dash-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .dash-pills { display: flex; gap: 8px; flex-wrap: wrap; transition: transform 0.3s ease; }
   .dash-pill {
     padding: 10px 18px; border-radius: 20px; border: 2px solid var(--ink); background: #fff;
     color: var(--ink); font-weight: 700; font-size: 14px; cursor: pointer; font-family: inherit;
@@ -136,10 +144,15 @@
     /* top queda fijo acá sólo como respaldo antes de que corra JS — positionCubeSheet()
        (ver init) lo ajusta en cada resize/render a 10px debajo de .dash-pills, así el
        selector de semana y los filtros de día quedan siempre alcanzables (y el día
-       elegido ahí es el que aplica acá — ver cargaDinoActiveDay()) con la hoja 3D abierta. */
+       elegido ahí es el que aplica acá — ver cargaDinoActiveDay()) con la hoja 3D abierta.
+       top SIEMPRE se cambia de golpe, nunca animado: es una propiedad de layout (dispara
+       reflow), y transicionarla junto con el transform de abrir/cerrar hacía que el
+       navegador la dejara "pegada" a mitad de camino hasta que algún otro evento forzaba
+       un reflow (p.ej. tocar algo) — ver setDashHeaderCollapsed/closeCubeSheet, que la
+       cambian sólo en el instante en que la hoja ya está fuera de pantalla. */
     position: fixed; top: 190px; left: 0; right: 0; bottom: 0; background: #fff; z-index: 600;
     display: flex; flex-direction: column; transform: translateY(100%);
-    transition: transform 0.3s ease, top 0.2s ease; touch-action: none;
+    transition: transform 0.3s ease; touch-action: none;
   }
   .cube-sheet.no-anim { transition: none; }
   /* Ya no hace falta despejar el status bar / notch acá (env(safe-area-inset-top)): la
@@ -1620,6 +1633,41 @@ function initPager() {
   pager.addEventListener('pointercancel', endDrag);
 }
 
+// Al abrir la hoja 3D, el selector de semana se va hacia arriba y desaparece, y los
+// filtros de día suben a ocupar su lugar — total, no hay semanas entre las que elegir
+// todavía, pero el día sigue haciendo falta (ver cargaDinoActiveDay()). Se mueven con
+// transform/opacity (no se tocan alto/display), así que #dash-pills sigue pudiéndose
+// medir con getBoundingClientRect() (que ya devuelve la posición CON el transform
+// puesto) para positionCubeSheet() — por eso esa función no necesita saber nada de esto.
+//
+// El desplazamiento (shift) se mide una sola vez, acá, justo al pasar de expandido a
+// colapsado — con todo todavía en su lugar normal, sin transform. positionCubeSheet()
+// NUNCA "limpia y vuelve a medir": si lo hiciera, un renderDashboard() en vuelo (el poll
+// de 25s llama a render()→renderDashboard() sin esperarlo) podría leer el estado a mitad
+// de ese limpiado y dejar la hoja mal ubicada — por eso esto es la única función que
+// toca el transform de verdad.
+let dashHeaderCollapsed = false;
+function setDashHeaderCollapsed(collapsed) {
+  if (dashHeaderCollapsed === collapsed) return;
+  dashHeaderCollapsed = collapsed;
+  const navRow = document.querySelector('.dash-week-nav');
+  const pills = document.getElementById('dash-pills');
+  if (!navRow || !pills) return;
+  if (collapsed) {
+    const navRect = navRow.getBoundingClientRect();
+    const pillsRect = pills.getBoundingClientRect();
+    const shift = pillsRect.top - navRect.top; // alto de la fila de semana + el gap hasta los filtros
+    navRow.style.transform = `translateY(${-shift}px)`;
+    navRow.style.opacity = '0';
+    pills.style.transform = `translateY(${-shift}px)`;
+  } else {
+    navRow.style.transform = '';
+    navRow.style.opacity = '';
+    pills.style.transform = '';
+  }
+  positionCubeSheet();
+}
+
 // PROTOTIPO: pestaña del dashboard que se arrastra hacia arriba para revelar la
 // pantalla del cubo 3D, y el tirador propio de esa pantalla para volver a cerrarla.
 let cubeSheetOpen = false;
@@ -1630,6 +1678,7 @@ let cubeSheetOpen = false;
 function openCubeSheet() {
   if (cubeSheetOpen) return;
   cubeSheetOpen = true;
+  setDashHeaderCollapsed(true);
   document.getElementById('cube-sheet').style.transform = 'translateY(0)';
   resizeCubeRenderer(); // #cube-scene pudo medir mal en initCubeRotate() (al cargar, con la pestaña todavía fuera de pantalla) — remedir ahora
   resetCubeView();
@@ -1643,6 +1692,11 @@ function closeCubeSheet() {
   // #cube-pull-tab) — bajarla siempre vuelve al dashboard, nunca a la principal.
   pagerIndex = 0;
   document.getElementById('pager').style.transform = `translateX(${-pagerIndex * 50}%)`;
+  // Recién ahora, con la hoja ya deslizándose fuera de pantalla: setDashHeaderCollapsed
+  // cambia el "top" de golpe (ver el comentario en .cube-sheet), y hacerlo ANTES de que
+  // la hoja esté afuera se vería como un salto — se espera a que termine la animación de
+  // cierre (misma duración que transition: transform de .cube-sheet).
+  setTimeout(() => { if (!cubeSheetOpen) setDashHeaderCollapsed(false); }, 300);
 }
 // El tirador angosto (pegado al borde) hacía que iOS/iPadOS confundiera el arrastre con
 // un gesto propio del sistema (mostrar el Dock/cambiar de app) y la pestaña "desaparecía"
