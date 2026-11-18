@@ -69,14 +69,18 @@
      la primera fila de .dash-page y scrolleaba con todo lo demás, pegada arriba del todo
      de la pantalla; ahora tiene su propia banda con una altura fija y el selector queda
      centrado verticalmente adentro, más fácil de alcanzar con el pulgar. */
+  /* Banda fija (no scrollea) con el selector de semana y los filtros de día debajo —
+     ambos juntos, para que el punto donde arranca la hoja 3D (ver .cube-sheet,
+     positionCubeSheet() en JS) tenga una referencia estable sin importar el scroll de
+     .dash-page. */
   .dash-header {
-    flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 0 20px;
-    min-height: calc(env(safe-area-inset-top) + 96px);
+    flex-shrink: 0; display: flex; flex-direction: column; padding: 0 20px 22px;
+    padding-top: max(24px, env(safe-area-inset-top));
   }
   .dash-page {
-    flex: 1; min-height: 0; overflow-y: auto; padding: 8px 20px 24px;
+    flex: 1; min-height: 0; overflow-y: auto; padding: 20px 20px 24px;
   }
-  .dash-week-nav { display: flex; align-items: center; gap: 8px; }
+  .dash-week-nav { display: flex; align-items: center; gap: 8px; align-self: center; margin-bottom: 22px; }
   .dash-week-btn { border: none; background: none; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; font-family: inherit; }
   .dash-week-next svg { transform: scaleX(-1); }
   .dash-week-text { margin-left: 8px; font-size: clamp(18px, 5.25vw, 22px); font-weight: 600; color: var(--ink); white-space: nowrap; }
@@ -85,7 +89,7 @@
   .dash-solicitados { margin-bottom: 2px; }
   .dash-total { font-size: clamp(38px, 11vw, 52px); font-weight: 500; color: #F0B953; margin-bottom: 20px; }
   .dash-title { margin-bottom: 18px; }
-  .dash-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 22px; }
+  .dash-pills { display: flex; gap: 8px; flex-wrap: wrap; }
   .dash-pill {
     padding: 10px 18px; border-radius: 20px; border: 2px solid var(--ink); background: #fff;
     color: var(--ink); font-weight: 700; font-size: 14px; cursor: pointer; font-family: inherit;
@@ -129,23 +133,25 @@
   }
   .cube-pull-tab::before { content: ''; width: 44px; height: 5px; border-radius: 3px; background: var(--ink3); }
   .cube-sheet {
-    position: fixed; inset: 0; background: #fff; z-index: 600;
+    /* top queda fijo acá sólo como respaldo antes de que corra JS — positionCubeSheet()
+       (ver init) lo ajusta en cada resize/render a 10px debajo de .dash-pills, así el
+       selector de semana y los filtros de día quedan siempre alcanzables (y el día
+       elegido ahí es el que aplica acá — ver cargaDinoActiveDay()) con la hoja 3D abierta. */
+    position: fixed; top: 190px; left: 0; right: 0; bottom: 0; background: #fff; z-index: 600;
     display: flex; flex-direction: column; transform: translateY(100%);
-    transition: transform 0.3s ease; touch-action: none;
+    transition: transform 0.3s ease, top 0.2s ease; touch-action: none;
   }
   .cube-sheet.no-anim { transition: none; }
+  /* Ya no hace falta despejar el status bar / notch acá (env(safe-area-inset-top)): la
+     hoja arranca bien por debajo de esa zona ahora que no cubre toda la pantalla, así
+     que esta franja de arriba puede ser bien angosta y dejarle más alto al modelo 3D. */
   .cube-sheet-handle {
-    flex-shrink: 0; height: 34px; display: flex; align-items: center; justify-content: center;
-    /* Bajada a la misma altura que el renglón de semana del dashboard (.dash-week-nav,
-       que arranca en max(24px, safe-area-top)) — pegada arriba del todo, en iOS/iPadOS
-       un arrastre hacia abajo ahí se puede confundir con abrir el Centro de Control.
-       margin, no padding: el elemento es border-box, así que padding-top le hubiera
-       comido alto fijo en vez de empujarlo hacia abajo. */
-    margin-top: calc(max(24px, env(safe-area-inset-top)) + 9px); touch-action: none;
+    flex-shrink: 0; height: 20px; display: flex; align-items: center; justify-content: center;
+    margin-top: 6px; touch-action: none;
   }
   .cube-sheet-handle::before { content: ''; width: 44px; height: 5px; border-radius: 3px; background: var(--ink3); }
   .cube-load-bar {
-    position: absolute; top: calc(max(24px, env(safe-area-inset-top)) + 49px); left: 50%; transform: translateX(-50%);
+    position: absolute; top: 32px; left: 50%; transform: translateX(-50%);
     z-index: 2; display: flex; gap: 10px;
   }
   .cube-load-btn {
@@ -155,7 +161,7 @@
   .cube-extras-btn { background: var(--cream); }
   .cube-scene {
     flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; touch-action: none;
-    padding-top: calc(max(24px, env(safe-area-inset-top)) + 65px); /* despeja el botón "Cargar Dino"/"Extras", que flota encima */
+    padding-top: 76px; /* despeja el botón "Cargar Dino"/"Extras", que flota encima */
   }
   .cube-scene canvas { touch-action: none; display: block; }
   .crate-info-item { display: flex; flex-direction: row; align-items: center; gap: 6px; }
@@ -191,9 +197,12 @@
      la fila vía el space-between del contenedor — al centrar el botón adentro de esta
      ancla, su centro horizontal queda alineado con el de los cuadros de cantidad sin
      importar el ancho real del botón (icono redondo o pill de texto). */
-  .extras-header { justify-content: space-between; }
+  .extras-header, .modify-header { justify-content: space-between; }
   .extras-center-col { width: 166px; display: flex; justify-content: center; flex-shrink: 0; }
   .extras-actions-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 16px; }
+  /* Misma ancla de 166px que .extras-center-col, pero sola (sin botón a la izquierda) —
+     deja "Guardar cambios" centrado sobre la columna de los steppers. */
+  .modify-save-row { display: flex; justify-content: flex-end; padding-top: 16px; }
   .extras-add-btn {
     border: none; background: var(--orange); color: #1a1a1a; font-weight: 800; font-size: 13px;
     padding: 8px 16px; border-radius: 18px; cursor: pointer; font-family: inherit; white-space: nowrap;
@@ -549,12 +558,12 @@
           <button class="dash-week-btn dash-week-next" id="dash-week-next" onclick="shiftDashWeek(1)" title="Semana siguiente"></button>
           <div class="dash-week-text"><span id="dash-week-range"></span> <span class="dash-week-year" id="dash-week-year"></span></div>
         </div>
+        <div class="dash-pills" id="dash-pills"></div>
       </div>
       <div class="dash-page">
         <div class="dash-solicitados">Solicitados</div>
         <div class="dash-total" id="dash-total"></div>
         <div class="dash-title">Por entregar</div>
-        <div class="dash-pills" id="dash-pills"></div>
         <div class="dash-grid" id="dash-grid"></div>
         <div class="dash-refill-banner" id="dash-refill-banner" style="display:none">
           <div class="dash-refill-info">
@@ -822,6 +831,14 @@ function todayDefaultDay() {
 // muestran su propio día, el resto de la semana (jue-dom) arranca en "Total".
 function dashDefaultDay() {
   return CR_WEEKDAY_TO_DIA[crNow().weekday] || 'total';
+}
+
+// Qué día usa "Cargar Dino"/Extras para calcular la carga — ahora que los filtros de día
+// del dashboard (dashDay) quedan siempre visibles y tocables con la hoja 3D abierta (ver
+// .cube-sheet/positionCubeSheet), el día elegido ahí es el que aplica. "Total" no es un
+// día real para cargar, así que en ese caso cae de vuelta a hoy.
+function cargaDinoActiveDay() {
+  return (dashDay && dashDay !== 'total') ? dashDay : todayDefaultDay();
 }
 
 const DAY_LABEL = { lunes: 'Lun', martes: 'Mar', miercoles: 'Mié', pickup: 'Pickup' };
@@ -2372,7 +2389,15 @@ function computeDashTotals(day, weekKey, pedidosForWeek) {
   return { remaining, totalCartones };
 }
 
-function setDashDay(day) { dashDay = day; renderDashboard(); }
+// Cambiar el filtro de día también recalcula la hoja 3D si está abierta, ya que ese día
+// es ahora el que aplica ahí (ver cargaDinoActiveDay()) — recomputeLoadFresh() (no el
+// camino "soft" de computeAndStoreLoad) porque cambiar de día es un reacomodo real, no
+// sólo topar lo ya cargado contra la demanda de hoy.
+function setDashDay(day) {
+  dashDay = day;
+  renderDashboard();
+  if (cubeSheetOpen && TRUCK_CRATES.crate_bed_1) recomputeLoadFresh();
+}
 
 async function renderDashboard() {
   const pillsEl = document.getElementById('dash-pills');
@@ -2434,6 +2459,7 @@ async function renderDashboard() {
         : 'Todavía no se fijó el punto de refill.';
     }
   }
+  positionCubeSheet(); // los pills recién se rellenaron — su alto real puede haber cambiado
 }
 
 // "Setear refill" — el repartidor elige, de la lista de paradas de hoy en su orden
@@ -2996,7 +3022,7 @@ function capLoadToReal(base, freshReal) {
 // hay alguien sentado ahí) — eso sí tiene que recalcularse de cero, aunque sea un
 // recálculo del mismo día, por eso BASE_LOAD se invalida cuando cambia.
 async function computeAndStoreLoad() {
-  const day = todayDefaultDay();
+  const day = cargaDinoActiveDay();
   const stops = await getCargaDinoStops(day);
   const freshReal = assignLoad(stops);
   if (freshReal.overflow) return freshReal;
@@ -3158,7 +3184,7 @@ function closeExtrasOverlay() { document.getElementById('extras-overlay').classL
 // cambia (modificar entrega / entrega flash) — nunca cuando solo se marca o reversa una
 // entrega (eso usa computeAndStoreLoad(), que topa sin reacomodar nada, ver arriba).
 async function recomputeLoadFresh() {
-  const day = todayDefaultDay();
+  const day = cargaDinoActiveDay();
   const stops = await getCargaDinoStops(day);
   const load = assignLoad(stops);
   if (load.overflow) return { load, overflow: true, capacityOverflow: false };
@@ -3584,7 +3610,7 @@ function renderModifyOverlay() {
   const { gsp, gcp, pcp } = deductionFromParts(stop.parts);
   const cafe = (stop.conf && stop.conf.fmtOverride && stop.conf.fmtOverride.fmt_cafe) || 0;
   document.getElementById('modify-overlay-body').innerHTML = `
-    <div class="route-header">
+    <div class="route-header modify-header">
       <div class="flash-title">Modificar entrega — ${c.nombre}</div>
       <button class="round-btn" id="modify-close-btn" title="Cerrar" onclick="closeModifyOverlay()">${iconCancel(40)}</button>
     </div>
@@ -3592,7 +3618,7 @@ function renderModifyOverlay() {
     ${stepperField('Grandes sin plástico', 'modify-gsp', gsp)}
     ${stepperField('Pequeños', 'modify-pcp', pcp)}
     ${stepperField('Café', 'modify-cafe', cafe)}
-    <button class="dash-refill-btn" onclick="saveModificarEntrega()">Guardar cambios</button>`;
+    <div class="modify-save-row"><div class="extras-center-col"><button class="dash-refill-btn" onclick="saveModificarEntrega()">Guardar cambios</button></div></div>`;
 }
 
 async function saveModificarEntrega() {
@@ -4133,13 +4159,26 @@ function setAppHeight() {
   const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
   document.documentElement.style.setProperty('--app-height', h + 'px');
 }
+// La hoja 3D (ver .cube-sheet) ya no tapa toda la pantalla — arranca 10px debajo de los
+// filtros de día (#dash-pills), que ahora quedan siempre arriba, alcanzables con la hoja
+// abierta (ver cargaDinoActiveDay()). Esa posición depende del alto real de la banda
+// semana+filtros, así que se mide en vivo en vez de calcularla a mano en CSS.
+function positionCubeSheet() {
+  const pills = document.getElementById('dash-pills');
+  const sheet = document.getElementById('cube-sheet');
+  if (!pills || !sheet) return;
+  const bottom = pills.getBoundingClientRect().bottom;
+  if (bottom <= 0) return; // #page-second todavía no tiene layout real (p.ej. antes del primer render)
+  sheet.style.top = Math.round(bottom + 10) + 'px';
+}
 setAppHeight();
-window.addEventListener('resize', setAppHeight);
-window.addEventListener('orientationchange', setAppHeight);
-window.addEventListener('pageshow', setAppHeight);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) setAppHeight(); });
+positionCubeSheet();
+window.addEventListener('resize', () => { setAppHeight(); positionCubeSheet(); });
+window.addEventListener('orientationchange', () => { setAppHeight(); positionCubeSheet(); });
+window.addEventListener('pageshow', () => { setAppHeight(); positionCubeSheet(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { setAppHeight(); positionCubeSheet(); } });
 if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', setAppHeight);
+  window.visualViewport.addEventListener('resize', () => { setAppHeight(); positionCubeSheet(); });
 }
 
 initPager();
