@@ -158,14 +158,26 @@
   }
   .cube-sheet.no-anim { transition: none; }
   .cube-sheet.no-anim .cube-sheet-inner { transition: none; }
-  /* El panel blanco realmente visible. Arranca cubeSheetOpenY píxeles más abajo que
-     .cube-sheet (vía margin-top, nunca vía top/height en .cube-sheet mismo — ver arriba)
-     y flex:1 lo estira para ocupar EXACTAMENTE el resto del alto de .cube-sheet, así que
-     nunca se pasa del fondo de la pantalla. margin-top se anima en vez de saltar, para
-     que acompañe al selector de semana/filtros colapsando arriba del dashboard. */
+  /* El panel realmente visible — vidrio esmerilado (blur + semitransparente, como el
+     material "thick" de iOS) en vez de blanco sólido, con las esquinas de arriba
+     redondeadas (las de abajo quedan a ras del borde inferior de la pantalla, así que no
+     hace falta redondearlas). Arranca cubeSheetOpenY píxeles más abajo que .cube-sheet
+     (vía margin-top, nunca vía top/height en .cube-sheet mismo — ver arriba) y flex:1 lo
+     estira para ocupar EXACTAMENTE el resto del alto de .cube-sheet, así que nunca se
+     pasa del fondo de la pantalla. margin-top se anima en vez de saltar, para que
+     acompañe al selector de semana/filtros colapsando arriba del dashboard. */
   .cube-sheet-inner {
     flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative;
-    background: #fff; pointer-events: auto; touch-action: none;
+    overflow: hidden; border-radius: 56px 56px 0 0;
+    background: rgba(255,255,255,0.72);
+    -webkit-backdrop-filter: blur(30px) saturate(1.7); backdrop-filter: blur(30px) saturate(1.7);
+    /* El "filo" de vidrio de la referencia: una línea nítida casi blanca justo en el
+       borde (border-top) más un resplandor suave que se apaga rápido hacia adentro
+       (inset box-shadow) — nada de sombra oscura por fuera, todo luz, para que se note
+       que hay un borde ahí sin volver a verse como un drop shadow. */
+    border-top: 1px solid rgba(255,255,255,0.95);
+    box-shadow: inset 0 1px 18px rgba(255,255,255,0.5);
+    pointer-events: auto; touch-action: none;
     margin-top: 190px; transition: margin-top 0.3s ease;
   }
   /* Ya no hace falta despejar el status bar / notch acá (env(safe-area-inset-top)): la
@@ -200,7 +212,11 @@
   .crate-icons-panel {
     flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 8px;
     padding: 14px 20px calc(env(safe-area-inset-bottom) + 28px);
-    background: #fff; transition: background-color 0.2s ease;
+    /* Transparente por defecto para que se vea el mismo vidrio esmerilado de
+       .cube-sheet-inner sin corte — el tinte al tocar una caja (ver crateIconsTint en JS)
+       ahora es semitransparente en vez de un color sólido, para que siga leyéndose como
+       parte del mismo vidrio y no como un parche opaco encima. */
+    background: transparent; transition: background-color 0.2s ease;
   }
   .crate-icons-title {
     font-weight: 800; font-size: 13px; letter-spacing: 0.03em; text-transform: uppercase; color: var(--ink);
@@ -1797,12 +1813,14 @@ function initCubeSwipeOpen() {
   area.addEventListener('pointercancel', endDrag);
 }
 // Deslizar hacia abajo cierra la pantalla 3D — pero solo si el arrastre arranca en la
-// franja de arriba (tirador + fila Cargar Dino/Extras). Si pudiera arrancar en cualquier
-// parte, un swipe hacia abajo sobre el modelo (para girarlo o tocar una caja) cerraría
-// la pantalla sin querer.
+// franja de arriba (tirador + fila Cargar Dino/Extras) O en la franja de abajo (íconos de
+// "Extras a bordo"). Si pudiera arrancar en cualquier parte, un swipe hacia abajo sobre
+// el modelo (para girarlo o tocar una caja) cerraría la pantalla sin querer — por eso la
+// franja del medio (.cube-scene) sigue afuera.
 function initCubeSwipeClose() {
   const sheet = document.getElementById('cube-sheet');
   const topZone = document.querySelector('.cube-load-bar');
+  const bottomZone = document.getElementById('crate-icons-panel');
   const DRAG_THRESHOLD = 70;
   const DIRECTION_LOCK = 10;
   let activePointerId = null, startX = null, startY = null, dy = 0, locked = null;
@@ -1811,7 +1829,9 @@ function initCubeSwipeClose() {
     if (activePointerId !== null) { locked = false; return; } // segundo dedo (pinch) — no es este gesto
     activePointerId = e.pointerId;
     startX = e.clientX; startY = e.clientY; dy = 0; locked = null;
-    if (e.clientY > topZone.getBoundingClientRect().bottom) locked = false;
+    const inTopZone = e.clientY <= topZone.getBoundingClientRect().bottom;
+    const inBottomZone = bottomZone && e.clientY >= bottomZone.getBoundingClientRect().top;
+    if (!inTopZone && !inBottomZone) locked = false;
   });
   sheet.addEventListener('pointermove', e => {
     if (e.pointerId !== activePointerId || locked === false) return;
@@ -2914,18 +2934,21 @@ function crateInfoItemHTML(sku, qty) {
 }
 
 // Mismo tono de la caja en el 3D (CRATE_SKU_COLORS), llevado a un pastel claro mezclando
-// con blanco — para que el fondo de la franja de íconos quede legible y sutil.
+// con blanco y SEMITRANSPARENTE (antes era un rgb() sólido) — así el tinte queda como un
+// matiz de color sobre el vidrio esmerilado de .cube-sheet-inner/.crate-icons-panel, en
+// vez de un parche opaco que corta el blur.
 function crateIconsTint(hex) {
   const r = (hex >> 16) & 0xFF, g = (hex >> 8) & 0xFF, b = hex & 0xFF;
   const mix = c => Math.round(c + (255 - c) * 0.78);
-  return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`;
+  return `rgba(${mix(r)}, ${mix(g)}, ${mix(b)}, 0.55)`;
 }
 
 // Franja de íconos al pie del 3D: por defecto, los extra cartones a bordo por SKU
-// (EXTRAS_QTY) bajo el título "Extras a bordo" y fondo blanco. Si hay una caja tocada
-// (selectedCrateName), esos mismos íconos pasan a mostrar el contenido de ESA caja bajo
-// "En esta caja", con el fondo teñido según su SKU — así no hace falta una franja
-// aparte arriba del vehículo solo para mostrar el contenido de una caja tocada.
+// (EXTRAS_QTY) bajo el título "Extras a bordo" y sin tinte propio (se ve el vidrio
+// esmerilado de .cube-sheet-inner). Si hay una caja tocada (selectedCrateName), esos
+// mismos íconos pasan a mostrar el contenido de ESA caja bajo "En esta caja", con un
+// matiz semitransparente según su SKU — así no hace falta una franja aparte arriba del
+// vehículo solo para mostrar el contenido de una caja tocada.
 function renderCrateIconsPanel() {
   const panel = document.getElementById('crate-icons-panel');
   const title = document.getElementById('crate-icons-title');
@@ -2941,7 +2964,7 @@ function renderCrateIconsPanel() {
   } else {
     title.textContent = 'Extras a bordo';
     row.innerHTML = ['gsp', 'gcp', 'pcp'].map(sku => crateInfoItemHTML(sku, EXTRAS_QTY[sku] || 0)).join('');
-    panel.style.background = '#fff';
+    panel.style.background = 'transparent';
   }
 }
 
