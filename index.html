@@ -169,8 +169,13 @@
   .cube-sheet-inner {
     flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative;
     overflow: hidden; border-radius: 56px 56px 0 0;
-    background: rgba(255,255,255,0.72);
-    -webkit-backdrop-filter: blur(30px) saturate(1.7); backdrop-filter: blur(30px) saturate(1.7);
+    /* Gris frío, no blanco puro — igual que la referencia, donde el vidrio esmerilado
+       tira a gris en vez de blanco cálido. saturate() bajo (no > 1) para no realzar el
+       naranja de atrás; eso es lo que le daba un aire más cálido que la referencia.
+       A mitad de camino entre el blanco original (255,255,255 / saturate 1.7) y el gris
+       de un paso atrás (226,226,224 / saturate 0.85) — ese gris se notaba demasiado. */
+    background: rgba(240,240,239,0.73);
+    -webkit-backdrop-filter: blur(30px) saturate(1.27); backdrop-filter: blur(30px) saturate(1.27);
     /* El "filo" de vidrio de la referencia: una línea nítida casi blanca justo en el
        borde (border-top) más un resplandor suave que se apaga rápido hacia adentro
        (inset box-shadow) — nada de sombra oscura por fuera, todo luz, para que se note
