@@ -141,16 +141,15 @@
   }
   .cube-pull-tab::before { content: ''; width: 44px; height: 5px; border-radius: 3px; background: var(--ink3); }
   .cube-sheet {
-    /* top queda fijo acá sólo como respaldo antes de que corra JS — positionCubeSheet()
-       (ver init) lo ajusta en cada resize/render a 10px debajo de .dash-pills, así el
-       selector de semana y los filtros de día quedan siempre alcanzables (y el día
-       elegido ahí es el que aplica acá — ver cargaDinoActiveDay()) con la hoja 3D abierta.
-       top SIEMPRE se cambia de golpe, nunca animado: es una propiedad de layout (dispara
-       reflow), y transicionarla junto con el transform de abrir/cerrar hacía que el
-       navegador la dejara "pegada" a mitad de camino hasta que algún otro evento forzaba
-       un reflow (p.ej. tocar algo) — ver setDashHeaderCollapsed/closeCubeSheet, que la
-       cambian sólo en el instante en que la hoja ya está fuera de pantalla. */
-    position: fixed; top: 190px; left: 0; right: 0; bottom: 0; background: #fff; z-index: 600;
+    /* top SIEMPRE en 0 — nunca se toca por JS. Antes top se recalculaba (10px debajo de
+       los filtros de día) y convivía con el transform de abrir/cerrar; cambiar una
+       propiedad de layout como top en el mismo elemento que tiene una transición de
+       transform en vuelo podía dejar al navegador con el repintado "pegado" a mitad de
+       camino hasta que algún evento ajeno (tocar cualquier cosa) forzaba un reflow. Con
+       top fijo, TODO el posicionamiento (cerrada, abierta con el selector de semana
+       visible, abierta con los filtros ya arriba) pasa siempre por este único transform
+       — ver cubeSheetOpenY/positionCubeSheet/setDashHeaderCollapsed en JS. */
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #fff; z-index: 600;
     display: flex; flex-direction: column; transform: translateY(100%);
     transition: transform 0.3s ease; touch-action: none;
   }
@@ -1641,17 +1640,22 @@ function initPager() {
 // puesto) para positionCubeSheet() — por eso esa función no necesita saber nada de esto.
 //
 // El desplazamiento (shift) se mide una sola vez, acá, justo al pasar de expandido a
-// colapsado — con todo todavía en su lugar normal, sin transform. positionCubeSheet()
-// NUNCA "limpia y vuelve a medir": si lo hiciera, un renderDashboard() en vuelo (el poll
-// de 25s llama a render()→renderDashboard() sin esperarlo) podría leer el estado a mitad
-// de ese limpiado y dejar la hoja mal ubicada — por eso esto es la única función que
-// toca el transform de verdad.
+// colapsado — con todo todavía en su lugar normal, sin transform. Nunca "limpia y vuelve
+// a medir": si lo hiciera, un renderDashboard() en vuelo (el poll de 25s llama a
+// render()→renderDashboard() sin esperarlo) podría leer el estado a mitad de ese
+// limpiado y dejar la hoja mal ubicada.
 let dashHeaderCollapsed = false;
+// Posición (en px desde arriba) de la hoja 3D cuando está abierta — con el selector de
+// semana visible o ya colapsado, según corresponda. top de .cube-sheet queda SIEMPRE en
+// 0 (ver esa clase); este valor es lo único que determina dónde "abierto" significa, vía
+// transform, nunca mezclado con un cambio de layout.
+let cubeSheetOpenY = 190;
 function setDashHeaderCollapsed(collapsed) {
   if (dashHeaderCollapsed === collapsed) return;
   dashHeaderCollapsed = collapsed;
   const navRow = document.querySelector('.dash-week-nav');
   const pills = document.getElementById('dash-pills');
+  const sheet = document.getElementById('cube-sheet');
   if (!navRow || !pills) return;
   if (collapsed) {
     const navRect = navRow.getBoundingClientRect();
@@ -1660,12 +1664,15 @@ function setDashHeaderCollapsed(collapsed) {
     navRow.style.transform = `translateY(${-shift}px)`;
     navRow.style.opacity = '0';
     pills.style.transform = `translateY(${-shift}px)`;
+    cubeSheetOpenY = Math.round(pillsRect.bottom - shift + 10);
   } else {
     navRow.style.transform = '';
     navRow.style.opacity = '';
     pills.style.transform = '';
+    const bottom = pills.getBoundingClientRect().bottom;
+    if (bottom > 0) cubeSheetOpenY = Math.round(bottom + 10);
   }
-  positionCubeSheet();
+  if (sheet && cubeSheetOpen) sheet.style.transform = `translateY(${cubeSheetOpenY}px)`;
 }
 
 // PROTOTIPO: pestaña del dashboard que se arrastra hacia arriba para revelar la
@@ -1678,8 +1685,7 @@ let cubeSheetOpen = false;
 function openCubeSheet() {
   if (cubeSheetOpen) return;
   cubeSheetOpen = true;
-  setDashHeaderCollapsed(true);
-  document.getElementById('cube-sheet').style.transform = 'translateY(0)';
+  setDashHeaderCollapsed(true); // también deja el transform de la hoja en su posición abierta (cubeSheetOpenY)
   resizeCubeRenderer(); // #cube-scene pudo medir mal en initCubeRotate() (al cargar, con la pestaña todavía fuera de pantalla) — remedir ahora
   resetCubeView();
   renderCrateIconsPanel();
@@ -1692,11 +1698,9 @@ function closeCubeSheet() {
   // #cube-pull-tab) — bajarla siempre vuelve al dashboard, nunca a la principal.
   pagerIndex = 0;
   document.getElementById('pager').style.transform = `translateX(${-pagerIndex * 50}%)`;
-  // Recién ahora, con la hoja ya deslizándose fuera de pantalla: setDashHeaderCollapsed
-  // cambia el "top" de golpe (ver el comentario en .cube-sheet), y hacerlo ANTES de que
-  // la hoja esté afuera se vería como un salto — se espera a que termine la animación de
-  // cierre (misma duración que transition: transform de .cube-sheet).
-  setTimeout(() => { if (!cubeSheetOpen) setDashHeaderCollapsed(false); }, 300);
+  // cubeSheetOpen ya es false acá, así que esto sólo reacomoda el selector de
+  // semana/filtros — nunca toca el transform de la hoja (ya en 100%, afuera de pantalla).
+  setDashHeaderCollapsed(false);
 }
 // El tirador angosto (pegado al borde) hacía que iOS/iPadOS confundiera el arrastre con
 // un gesto propio del sistema (mostrar el Dock/cambiar de app) y la pestaña "desaparecía"
@@ -1731,8 +1735,13 @@ function initCubeSwipeOpen() {
       e.preventDefault();
       sheet.classList.add('no-anim');
       dy = curDy;
-      const pct = Math.min(100, Math.max(0, 100 + (dy / window.innerHeight) * 100));
-      sheet.style.transform = `translateY(${pct}%)`;
+      // En px, interpolando entre cerrada (toda la altura de pantalla) y abierta
+      // (cubeSheetOpenY, todavía con el selector de semana expandido — el colapso recién
+      // pasa al soltar, en openCubeSheet) — nunca en %, para no terminar mezclando
+      // unidades con el valor final que deja puesto openCubeSheet.
+      const closedY = window.innerHeight;
+      const frac = Math.min(1, Math.max(0, -dy / (closedY - cubeSheetOpenY)));
+      sheet.style.transform = `translateY(${closedY - frac * (closedY - cubeSheetOpenY)}px)`;
     }
   });
   const endDrag = e => {
@@ -1776,8 +1785,11 @@ function initCubeSwipeClose() {
     if (locked) {
       sheet.classList.add('no-anim');
       dy = curDy;
-      const pct = Math.min(100, Math.max(0, (dy / window.innerHeight) * 100));
-      sheet.style.transform = `translateY(${pct}%)`;
+      // En px, interpolando entre abierta (cubeSheetOpenY, ya colapsada — es lo único
+      // que puede estar pasando acá, ver initCubeSwipeClose más arriba) y cerrada.
+      const closedY = window.innerHeight;
+      const frac = Math.min(1, Math.max(0, dy / (closedY - cubeSheetOpenY)));
+      sheet.style.transform = `translateY(${cubeSheetOpenY + frac * (closedY - cubeSheetOpenY)}px)`;
     }
   });
   const endDrag = e => {
@@ -1785,7 +1797,7 @@ function initCubeSwipeClose() {
     if (locked) {
       sheet.classList.remove('no-anim');
       if (dy > DRAG_THRESHOLD) closeCubeSheet();
-      else sheet.style.transform = 'translateY(0)'; // no llegó al umbral: vuelve a abierto
+      else sheet.style.transform = `translateY(${cubeSheetOpenY}px)`; // no llegó al umbral: vuelve a abierto
     }
     activePointerId = null; locked = null;
   };
@@ -4216,14 +4228,16 @@ function setAppHeight() {
 // La hoja 3D (ver .cube-sheet) ya no tapa toda la pantalla — arranca 10px debajo de los
 // filtros de día (#dash-pills), que ahora quedan siempre arriba, alcanzables con la hoja
 // abierta (ver cargaDinoActiveDay()). Esa posición depende del alto real de la banda
-// semana+filtros, así que se mide en vivo en vez de calcularla a mano en CSS.
+// semana+filtros, así que se mide en vivo en vez de calcularla a mano en CSS — y se
+// guarda en cubeSheetOpenY, nunca en el "top" del elemento (ver esa clase).
 function positionCubeSheet() {
   const pills = document.getElementById('dash-pills');
   const sheet = document.getElementById('cube-sheet');
   if (!pills || !sheet) return;
   const bottom = pills.getBoundingClientRect().bottom;
   if (bottom <= 0) return; // #page-second todavía no tiene layout real (p.ej. antes del primer render)
-  sheet.style.top = Math.round(bottom + 10) + 'px';
+  cubeSheetOpenY = Math.round(bottom + 10);
+  if (cubeSheetOpen) sheet.style.transform = `translateY(${cubeSheetOpenY}px)`;
 }
 setAppHeight();
 positionCubeSheet();
