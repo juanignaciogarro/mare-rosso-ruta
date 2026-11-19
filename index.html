@@ -141,19 +141,33 @@
   }
   .cube-pull-tab::before { content: ''; width: 44px; height: 5px; border-radius: 3px; background: var(--ink3); }
   .cube-sheet {
-    /* top SIEMPRE en 0 — nunca se toca por JS. Antes top se recalculaba (10px debajo de
-       los filtros de día) y convivía con el transform de abrir/cerrar; cambiar una
-       propiedad de layout como top en el mismo elemento que tiene una transición de
-       transform en vuelo podía dejar al navegador con el repintado "pegado" a mitad de
-       camino hasta que algún evento ajeno (tocar cualquier cosa) forzaba un reflow. Con
-       top fijo, TODO el posicionamiento (cerrada, abierta con el selector de semana
-       visible, abierta con los filtros ya arriba) pasa siempre por este único transform
-       — ver cubeSheetOpenY/positionCubeSheet/setDashHeaderCollapsed en JS. */
-    position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #fff; z-index: 600;
-    display: flex; flex-direction: column; transform: translateY(100%);
-    transition: transform 0.3s ease; touch-action: none;
+    /* top SIEMPRE en 0 y alto SIEMPRE el de toda la pantalla — nunca se tocan por JS.
+       Antes top se recalculaba (10px debajo de los filtros de día) y convivía con el
+       transform de abrir/cerrar; cambiar una propiedad de layout como top en el mismo
+       elemento que tiene una transición de transform en vuelo podía dejar al navegador
+       con el repintado "pegado" a mitad de camino hasta que algún evento ajeno (tocar
+       cualquier cosa) forzaba un reflow. Con top fijo, el transform de ESTE elemento
+       sólo abre/cierra (0% / 100%, nunca otro valor) — ver cubeSheetOpenY más abajo,
+       que ahora mueve el panel visible por dentro, vía .cube-sheet-inner, en vez de
+       mover esta capa entera. pointer-events:none para que la franja transparente de
+       arriba (antes de que .cube-sheet-inner arranque) deje pasar los toques a los
+       filtros del dashboard que quedan debajo. */
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 600;
+    display: flex; flex-direction: column; overflow: hidden; transform: translateY(100%);
+    transition: transform 0.3s ease; touch-action: none; pointer-events: none;
   }
   .cube-sheet.no-anim { transition: none; }
+  .cube-sheet.no-anim .cube-sheet-inner { transition: none; }
+  /* El panel blanco realmente visible. Arranca cubeSheetOpenY píxeles más abajo que
+     .cube-sheet (vía margin-top, nunca vía top/height en .cube-sheet mismo — ver arriba)
+     y flex:1 lo estira para ocupar EXACTAMENTE el resto del alto de .cube-sheet, así que
+     nunca se pasa del fondo de la pantalla. margin-top se anima en vez de saltar, para
+     que acompañe al selector de semana/filtros colapsando arriba del dashboard. */
+  .cube-sheet-inner {
+    flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative;
+    background: #fff; pointer-events: auto; touch-action: none;
+    margin-top: 190px; transition: margin-top 0.3s ease;
+  }
   /* Ya no hace falta despejar el status bar / notch acá (env(safe-area-inset-top)): la
      hoja arranca bien por debajo de esa zona ahora que no cubre toda la pantalla, así
      que esta franja de arriba puede ser bien angosta y dejarle más alto al modelo 3D. */
@@ -337,6 +351,10 @@
     padding: 10px 16px calc(env(safe-area-inset-bottom) + 5px);
   }
   .egg-btn { margin-left: auto; }
+  /* Igual que .cube-sheet-handle/.drag-target: el arrastre horizontal propio (ver
+     initMsgBtnEtaSwipe) necesita touch-action:none para que iOS no se adelante con su
+     propio gesto de scroll antes de que el JS llegue a leer el movimiento. */
+  #msg-btn { touch-action: none; }
   /* Centra el chevron sobre el eje vertical del ícono del huevo (el más ancho de los 3),
      no al ras del borde derecho — si no, al tener menos ancho que el huevo, queda más
      a la derecha que él aunque ambos estén "pegados" al mismo borde. */
@@ -374,6 +392,11 @@
   }
   .overlay-backdrop.show { display: flex; }
   #extras-overlay, #personas-overlay { z-index: 700; } /* por encima de .cube-sheet (600), se abren desde ahí */
+  /* message-overlay puede abrirse desde adentro de route-overlay (ver openRouteChat) —
+     sin esto, al estar ambos en el mismo z-index de .overlay-backdrop, quedaría tapado
+     por route-overlay en vez de encima (gana el que está después en el DOM, y
+     route-overlay va después — ver el HTML). */
+  #message-overlay { z-index: 520; }
   /* Interacción táctil — nunca mostrar la barra de scroll, aunque siga siendo desplazable. */
   .overlay-card, .route-list { scrollbar-width: none; -ms-overflow-style: none; }
   .overlay-card::-webkit-scrollbar, .route-list::-webkit-scrollbar { display: none; width: 0; height: 0; }
@@ -594,15 +617,17 @@
 </main>
 
 <div class="cube-sheet" id="cube-sheet">
-  <div class="cube-sheet-handle" id="cube-sheet-handle"></div>
-  <div class="cube-load-bar">
-    <button class="cube-load-btn" onclick="openPersonasOverlay()">Cargar Dino</button>
-    <button class="cube-load-btn cube-extras-btn" id="extras-btn" onclick="openExtrasOverlay()">Extras</button>
-  </div>
-  <div class="cube-scene" id="cube-scene"></div>
-  <div class="crate-icons-panel" id="crate-icons-panel">
-    <div class="crate-icons-title" id="crate-icons-title">Extras a bordo</div>
-    <div class="crate-icons-row" id="crate-icons-row"></div>
+  <div class="cube-sheet-inner" id="cube-sheet-inner">
+    <div class="cube-sheet-handle" id="cube-sheet-handle"></div>
+    <div class="cube-load-bar">
+      <button class="cube-load-btn" onclick="openPersonasOverlay()">Cargar Dino</button>
+      <button class="cube-load-btn cube-extras-btn" id="extras-btn" onclick="openExtrasOverlay()">Extras</button>
+    </div>
+    <div class="cube-scene" id="cube-scene"></div>
+    <div class="crate-icons-panel" id="crate-icons-panel">
+      <div class="crate-icons-title" id="crate-icons-title">Extras a bordo</div>
+      <div class="crate-icons-row" id="crate-icons-row"></div>
+    </div>
   </div>
 </div>
 
@@ -1597,6 +1622,12 @@ function initPager() {
   let startX = null, startY = null, dx = 0, isSwipe = null;
 
   pager.addEventListener('pointerdown', e => {
+    // #msg-btn (ver initMsgBtnEtaSwipe) tiene su propio arrastre horizontal para el
+    // selector de minutos, y burbujea el mismo pointerdown/pointermove hasta acá (es
+    // descendiente de #pager) — sin este corte, los dos gestos lo seguían a la vez: se
+    // abría el selector Y la página se corría por debajo. startX en null hace que el
+    // pointermove de más abajo lo ignore por completo mientras dure este puntero.
+    if (e.target.closest('#msg-btn')) { startX = null; return; }
     startX = e.clientX; startY = e.clientY; dx = 0; isSwipe = null;
   });
   pager.addEventListener('pointermove', e => {
@@ -1645,22 +1676,30 @@ function initPager() {
 // render()→renderDashboard() sin esperarlo) podría leer el estado a mitad de ese
 // limpiado y dejar la hoja mal ubicada.
 let dashHeaderCollapsed = false;
-// Posición (en px desde arriba) de la hoja 3D cuando está abierta — con el selector de
-// semana visible o ya colapsado, según corresponda. top de .cube-sheet queda SIEMPRE en
-// 0 (ver esa clase); este valor es lo único que determina dónde "abierto" significa, vía
-// transform, nunca mezclado con un cambio de layout.
+// Posición (en px desde arriba) de donde arranca el panel VISIBLE de la hoja 3D — con
+// el selector de semana visible o ya colapsado, según corresponda. Se aplica como
+// margin-top de #cube-sheet-inner (nunca como top/height de #cube-sheet, que queda
+// siempre fijo — ver esa clase), así que #cube-sheet-inner, con flex:1, se estira para
+// ocupar justo el resto de la pantalla y nunca se pasa del fondo del viewport.
 let cubeSheetOpenY = 190;
+// Cuánto del viewport desde arriba queda libre cuando el selector de semana está
+// escondido y los filtros suben a ocupar su lugar — antes los filtros aterrizaban
+// exactamente donde arrancaba el selector de semana (margin-top del .dash-week-nav), que
+// alcanza para el notch/status bar normal (env(safe-area-inset-top)) pero no para los
+// controles de ventana de iPadOS cuando la app corre en una ventana flotante/Stage
+// Manager en vez de pantalla completa — esos no los reporta env(), así que hace falta un
+// margen fijo de más.
+const COLLAPSED_FILTERS_TOP = 56;
 function setDashHeaderCollapsed(collapsed) {
   if (dashHeaderCollapsed === collapsed) return;
   dashHeaderCollapsed = collapsed;
   const navRow = document.querySelector('.dash-week-nav');
   const pills = document.getElementById('dash-pills');
-  const sheet = document.getElementById('cube-sheet');
+  const inner = document.getElementById('cube-sheet-inner');
   if (!navRow || !pills) return;
   if (collapsed) {
-    const navRect = navRow.getBoundingClientRect();
     const pillsRect = pills.getBoundingClientRect();
-    const shift = pillsRect.top - navRect.top; // alto de la fila de semana + el gap hasta los filtros
+    const shift = pillsRect.top - COLLAPSED_FILTERS_TOP;
     navRow.style.transform = `translateY(${-shift}px)`;
     navRow.style.opacity = '0';
     pills.style.transform = `translateY(${-shift}px)`;
@@ -1672,7 +1711,7 @@ function setDashHeaderCollapsed(collapsed) {
     const bottom = pills.getBoundingClientRect().bottom;
     if (bottom > 0) cubeSheetOpenY = Math.round(bottom + 10);
   }
-  if (sheet && cubeSheetOpen) sheet.style.transform = `translateY(${cubeSheetOpenY}px)`;
+  if (inner && cubeSheetOpen) inner.style.marginTop = `${cubeSheetOpenY}px`;
 }
 
 // PROTOTIPO: pestaña del dashboard que se arrastra hacia arriba para revelar la
@@ -1685,7 +1724,8 @@ let cubeSheetOpen = false;
 function openCubeSheet() {
   if (cubeSheetOpen) return;
   cubeSheetOpen = true;
-  setDashHeaderCollapsed(true); // también deja el transform de la hoja en su posición abierta (cubeSheetOpenY)
+  document.getElementById('cube-sheet').style.transform = 'translateY(0)';
+  setDashHeaderCollapsed(true); // además deja el margin-top de #cube-sheet-inner en su valor colapsado (cubeSheetOpenY)
   resizeCubeRenderer(); // #cube-scene pudo medir mal en initCubeRotate() (al cargar, con la pestaña todavía fuera de pantalla) — remedir ahora
   resetCubeView();
   renderCrateIconsPanel();
@@ -1735,13 +1775,13 @@ function initCubeSwipeOpen() {
       e.preventDefault();
       sheet.classList.add('no-anim');
       dy = curDy;
-      // En px, interpolando entre cerrada (toda la altura de pantalla) y abierta
-      // (cubeSheetOpenY, todavía con el selector de semana expandido — el colapso recién
-      // pasa al soltar, en openCubeSheet) — nunca en %, para no terminar mezclando
-      // unidades con el valor final que deja puesto openCubeSheet.
+      // #cube-sheet (la capa que se arrastra) ya no se mueve según cubeSheetOpenY — ese
+      // valor ahora sólo corre el margin-top de #cube-sheet-inner por dentro (ver esa
+      // clase). Esta capa exterior es siempre toda la pantalla, así que abrir/cerrar es
+      // directo: de toda su propia altura (cerrada, abajo de todo) a 0 (abierta).
       const closedY = window.innerHeight;
-      const frac = Math.min(1, Math.max(0, -dy / (closedY - cubeSheetOpenY)));
-      sheet.style.transform = `translateY(${closedY - frac * (closedY - cubeSheetOpenY)}px)`;
+      const frac = Math.min(1, Math.max(0, -dy / closedY));
+      sheet.style.transform = `translateY(${closedY - frac * closedY}px)`;
     }
   });
   const endDrag = e => {
@@ -1785,11 +1825,12 @@ function initCubeSwipeClose() {
     if (locked) {
       sheet.classList.add('no-anim');
       dy = curDy;
-      // En px, interpolando entre abierta (cubeSheetOpenY, ya colapsada — es lo único
-      // que puede estar pasando acá, ver initCubeSwipeClose más arriba) y cerrada.
+      // Igual que en initCubeSwipeOpen: #cube-sheet va de 0 (abierta) a toda su propia
+      // altura (cerrada) — cubeSheetOpenY no interviene acá, sólo en el margin-top de
+      // #cube-sheet-inner, que no se toca durante este arrastre.
       const closedY = window.innerHeight;
-      const frac = Math.min(1, Math.max(0, dy / (closedY - cubeSheetOpenY)));
-      sheet.style.transform = `translateY(${cubeSheetOpenY + frac * (closedY - cubeSheetOpenY)}px)`;
+      const frac = Math.min(1, Math.max(0, dy / closedY));
+      sheet.style.transform = `translateY(${frac * closedY}px)`;
     }
   });
   const endDrag = e => {
@@ -1797,7 +1838,7 @@ function initCubeSwipeClose() {
     if (locked) {
       sheet.classList.remove('no-anim');
       if (dy > DRAG_THRESHOLD) closeCubeSheet();
-      else sheet.style.transform = `translateY(${cubeSheetOpenY}px)`; // no llegó al umbral: vuelve a abierto
+      else sheet.style.transform = 'translateY(0)'; // no llegó al umbral: vuelve a abierto
     }
     activePointerId = null; locked = null;
   };
@@ -2358,6 +2399,7 @@ function render() {
   const active = STOPS_BY_ID[activeStopId] || current;
   setActionBar(active.cliente);
   initNextRowGestures();
+  initMsgBtnEtaSwipe();
 }
 
 // ═══════════════════════════════════════════════
@@ -3319,10 +3361,16 @@ function initNextRowGestures() {
   });
 }
 
+// Cliente vigente en el botón de mensaje de la pantalla principal — lo guarda
+// setActionBar() en cada render para que initMsgBtnEtaSwipe() sepa a qué cliente abrirle
+// el overlay si el arrastre horizontal sobre ese botón llega a activarse.
+let msgBtnActiveClienteId = null;
+
 function setActionBar(c) {
   const msgBtn = document.getElementById('msg-btn');
   const noteBtn = document.getElementById('note-btn');
   const eggBtn = document.getElementById('egg-btn');
+  msgBtnActiveClienteId = c ? c.id : null;
   if (!msgBtn || !c) return;
   const wa = waUrl(c);
   msgBtn.disabled = !wa;
@@ -3449,6 +3497,14 @@ function hapticTick() {
   try { if (navigator.vibrate) navigator.vibrate(8); } catch (e) {}
 }
 
+// Controlador del selector de minutos de la hoja ABIERTA en este momento — lo arma
+// initEtaDrag() cada vez que se renderiza el overlay de mensaje, y lo usa tanto el
+// arrastre propio del reloj (ver abajo) como el arrastre horizontal del botón de mensaje
+// de la pantalla principal (ver initMsgBtnEtaSwipe), que arranca ANTES de que el overlay
+// exista — por eso necesita un controlador expuesto en vez de las funciones internas de
+// initEtaDrag, que son privadas a ese cierre.
+let etaPickerCtl = null;
+
 // Un toque corto en el reloj (sin arrastrar) va directo al mensaje de 5 minutos
 // (comportamiento de siempre, vía selectMsgTemplate). Arrastrar el dedo hacia un lado más
 // de ETA_PICKER_DRAG_TRIGGER_PX en cualquier momento activa la tira horizontal — sin
@@ -3471,7 +3527,7 @@ function initEtaDrag(clienteId) {
     [...track.children].forEach((el, i) => {
       const dist = Math.abs(i - idxFloat);
       el.style.opacity = Math.max(0.3, 1 - dist * 0.35);
-      el.style.transform = `scale(${1 + 0.7 * Math.max(0, 1 - dist)})`; // siempre relativo al tamaño original (1), nunca compone sobre el scale del frame anterior — así no crece sin control
+      el.style.transform = i === nearest ? 'scale(2)' : 'scale(1)'; // sólo el elegido se agranda — el resto queda en su tamaño normal
       el.style.color = i === nearest ? 'var(--orange-dark)' : '#1a1a1a';
     });
     if (nearest !== lastNearest) { lastNearest = nearest; hapticTick(); }
@@ -3530,6 +3586,71 @@ function initEtaDrag(clienteId) {
   };
   box.addEventListener('pointerup', endPress);
   box.addEventListener('pointercancel', endPress);
+
+  etaPickerCtl = {
+    enterPicking,
+    commitPicking,
+    getStartIndex: () => startIndex,
+    setLiveIndex(idxFloat) { liveIndexFloat = idxFloat; updateVisual(idxFloat); },
+  };
+}
+
+// Segunda entrada al selector de minutos: las mismas reglas que arrastrar el reloj
+// (mismo umbral ETA_PICKER_DRAG_TRIGGER_PX, misma conversión px→minutos, mismo haptic),
+// pero arrancando desde el botón de mensaje de la pantalla principal, con el overlay
+// todavía cerrado. Al cruzar el umbral abre el overlay YA directo en el selector
+// (enterPicking), sin pasar por las dos cajas a medio camino. El pointerId queda
+// capturado en msg-btn durante todo el gesto — el overlay nace debajo, pero msg-btn
+// nunca se saca del DOM al abrirlo, así que la captura se mantiene y los eventos
+// siguen llegando acá aunque el dedo ya esté físicamente sobre el overlay.
+function initMsgBtnEtaSwipe() {
+  const btn = document.getElementById('msg-btn');
+  if (!btn) return;
+  let pointerId = null, startX = 0, activated = false;
+
+  btn.addEventListener('pointerdown', e => {
+    if (btn.disabled || pointerId !== null) return;
+    pointerId = e.pointerId;
+    startX = e.clientX;
+    activated = false;
+    btn.setPointerCapture(pointerId);
+  });
+  btn.addEventListener('pointermove', e => {
+    if (e.pointerId !== pointerId) return;
+    const dx = e.clientX - startX;
+    if (!activated) {
+      if (Math.abs(dx) < ETA_PICKER_DRAG_TRIGGER_PX || !msgBtnActiveClienteId) return;
+      activated = true;
+      openMessageOverlay(msgBtnActiveClienteId);
+      if (etaPickerCtl) etaPickerCtl.enterPicking();
+    }
+    e.preventDefault();
+    if (!etaPickerCtl) return;
+    const idxFloat = Math.max(0, Math.min(ETA_MINUTE_OPTIONS.length - 1, etaPickerCtl.getStartIndex() - dx / ETA_PICKER_SLOT));
+    etaPickerCtl.setLiveIndex(idxFloat);
+  });
+  const endPress = e => {
+    if (e.pointerId !== pointerId) return;
+    pointerId = null;
+    if (activated && etaPickerCtl) {
+      etaPickerCtl.commitPicking();
+      // El click nativo de mouse SÍ dispara después de un mouseup aunque haya habido
+      // arrastre de por medio (a diferencia del touch, donde el navegador ya lo suprime
+      // solo) — sin esto, ese click llamaría de nuevo a msg-btn.onclick (ver
+      // setActionBar) y reabriría el overlay desde cero, perdiendo la elección recién
+      // hecha. Se traga sólo el próximo click, una vez.
+      suppressNextClick = true;
+    }
+    activated = false;
+    // Toque corto: no se tocó nada acá — el onclick nativo de msg-btn (ver setActionBar)
+    // sigue disparando normalmente y abre el overlay de siempre.
+  };
+  btn.addEventListener('pointerup', endPress);
+  btn.addEventListener('pointercancel', endPress);
+  let suppressNextClick = false;
+  btn.addEventListener('click', e => {
+    if (suppressNextClick) { suppressNextClick = false; e.stopPropagation(); e.preventDefault(); }
+  }, true);
 }
 
 function callClient(id) {
@@ -4035,7 +4156,19 @@ function initRouteHeaderIcons() {
   const closeBtn = document.getElementById('route-close-btn');
   if (closeBtn && !closeBtn.innerHTML) closeBtn.innerHTML = iconCancel(40);
 }
+// Cliente normal ('c:') con teléfono: mismo overlay de plantillas (reloj=ETA,
+// check=entregado) que el botón de mensaje de la pantalla principal — nunca el chat de
+// WhatsApp directo. Entrega flash ('q:'): no tiene ficha en STOPS_BY_ID (ver
+// buildQuickStops), así que no hay con qué armar ese overlay — sigue yendo directo al
+// chat, como antes.
 function openRouteChat() {
+  if (routeSelectedKey && routeSelectedKey.slice(0, 2) === 'c:') {
+    const id = parseInt(routeSelectedKey.slice(2), 10);
+    const stop = STOPS_BY_ID[id];
+    if (!stop || !waUrl(stop.cliente)) return;
+    openMessageOverlay(id);
+    return;
+  }
   const c = routeSelectedContact();
   const wa = c && waUrl(c);
   if (!wa) return;
@@ -4225,19 +4358,20 @@ function setAppHeight() {
   const h = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
   document.documentElement.style.setProperty('--app-height', h + 'px');
 }
-// La hoja 3D (ver .cube-sheet) ya no tapa toda la pantalla — arranca 10px debajo de los
-// filtros de día (#dash-pills), que ahora quedan siempre arriba, alcanzables con la hoja
-// abierta (ver cargaDinoActiveDay()). Esa posición depende del alto real de la banda
-// semana+filtros, así que se mide en vivo en vez de calcularla a mano en CSS — y se
-// guarda en cubeSheetOpenY, nunca en el "top" del elemento (ver esa clase).
+// El panel visible de la hoja 3D (ver .cube-sheet-inner) ya no tapa toda la pantalla —
+// arranca 10px debajo de los filtros de día (#dash-pills), que ahora quedan siempre
+// arriba, alcanzables con la hoja abierta (ver cargaDinoActiveDay()). Esa posición
+// depende del alto real de la banda semana+filtros, así que se mide en vivo en vez de
+// calcularla a mano en CSS — y se guarda en cubeSheetOpenY, nunca en el "top"/alto de
+// #cube-sheet (ver esa clase).
 function positionCubeSheet() {
   const pills = document.getElementById('dash-pills');
-  const sheet = document.getElementById('cube-sheet');
-  if (!pills || !sheet) return;
+  const inner = document.getElementById('cube-sheet-inner');
+  if (!pills || !inner) return;
   const bottom = pills.getBoundingClientRect().bottom;
   if (bottom <= 0) return; // #page-second todavía no tiene layout real (p.ej. antes del primer render)
   cubeSheetOpenY = Math.round(bottom + 10);
-  if (cubeSheetOpen) sheet.style.transform = `translateY(${cubeSheetOpenY}px)`;
+  if (cubeSheetOpen) inner.style.marginTop = `${cubeSheetOpenY}px`;
 }
 setAppHeight();
 positionCubeSheet();
