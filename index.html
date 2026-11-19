@@ -364,7 +364,7 @@
   .next-row.faded:not(.selected) .parada-sku.cafe { background: #F2F2F2; color: #D9B99A; }
   /* Botones con assets reales de Figma: el propio SVG trae su círculo/sombra,
      así que el <button> queda sin fondo/borde propio — solo centra el ícono. */
-  .chevron-btn, .round-btn, .egg-btn {
+  .round-btn, .egg-btn {
     border: none; background: none; padding: 0; display: flex; align-items: center;
     justify-content: center; cursor: pointer; flex-shrink: 0; font-family: inherit;
   }
@@ -380,16 +380,12 @@
      initMsgBtnEtaSwipe) necesita touch-action:none para que iOS no se adelante con su
      propio gesto de scroll antes de que el JS llegue a leer el movimiento. */
   #msg-btn { touch-action: none; }
-  /* Centra el chevron sobre el eje vertical del ícono del huevo (el más ancho de los 3),
-     no al ras del borde derecho — si no, al tener menos ancho que el huevo, queda más
-     a la derecha que él aunque ambos estén "pegados" al mismo borde. */
-  .chevron-btn { margin-right: 30px; }
   .round-btn.dark {
     width: 56px; height: 56px; border-radius: 50%; font-size: 22px; color: #fff;
     border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.18);
   }
   .round-btn.dark.sm { width: 40px; height: 40px; font-size: 16px; }
-  .round-btn:disabled, .chevron-btn:disabled, .dash-week-btn:disabled { opacity: 0.35; }
+  .round-btn:disabled, .dash-week-btn:disabled { opacity: 0.35; }
   /* Pequeño "bounce" al estilo Material al tocar un ícono — se agrega la clase por JS
      y se quita sola al terminar, para que pueda volver a dispararse en el próximo tap. */
   @keyframes icon-press-bounce {
@@ -422,6 +418,21 @@
      por route-overlay en vez de encima (gana el que está después en el DOM, y
      route-overlay va después — ver el HTML). */
   #message-overlay { z-index: 520; }
+  /* route-overlay ahora también se abre deslizando hacia arriba en la pantalla principal
+     (ver initRouteSwipeOpen) — para poder previsualizarlo EN VIVO mientras se arrastra
+     (la tarjeta subiendo desde abajo, el fondo oscureciéndose) queda siempre montado
+     (display:flex fijo, nunca display:none) y se abre/cierra por opacity + el transform
+     de .overlay-card, no por display. pointer-events:none mientras no está "show" para
+     que, aun con opacity:0, no tape los toques de la pantalla principal que arrancan el
+     arrastre. */
+  #route-overlay {
+    display: flex; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+  }
+  #route-overlay.show { opacity: 1; pointer-events: auto; }
+  #route-overlay.no-anim { transition: none; }
+  #route-overlay.no-anim .overlay-card { transition: none; }
+  #route-overlay .overlay-card { transform: translateY(100%); transition: transform 0.3s ease; }
+  #route-overlay.show .overlay-card { transform: translateY(0); }
   /* Interacción táctil — nunca mostrar la barra de scroll, aunque siga siendo desplazable. */
   .overlay-card, .route-list { scrollbar-width: none; -ms-overflow-style: none; }
   .overlay-card::-webkit-scrollbar, .route-list::-webkit-scrollbar { display: none; width: 0; height: 0; }
@@ -1290,31 +1301,6 @@ function iconNoteWarn(size) {
 <path d="M43.001 57.111C43.001 55.8692 44.0063 54.8626 45.2465 54.8626H46.3693C47.6095 54.8626 48.6148 55.8692 48.6148 57.111V58.7972C48.6148 60.039 47.6095 61.0456 46.3693 61.0456H45.2465C44.0063 61.0456 43.001 60.039 43.001 58.7972V57.111Z" fill="white"/>
 <path d="M43.0306 33.5314C43.0146 32.7444 43.6475 32.0977 44.4337 32.0977H47.1832C47.9694 32.0977 48.6023 32.7444 48.5864 33.5314L48.2222 51.5185C48.2067 52.2833 47.5831 52.8953 46.819 52.8953H44.7979C44.0339 52.8953 43.4102 52.2833 43.3947 51.5185L43.0306 33.5314Z" fill="white"/>
 <rect opacity="0.8" x="20" y="21" width="19" height="19" rx="9.5" fill="white"/>
-</svg>`;
-}
-
-function iconClipboard(size) {
-  return `<svg width="${size}" height="${size}" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g filter="url(#filter0_d_clipboard)">
-<circle cx="89.6" cy="85.6" r="73.6" fill="white"/>
-</g>
-<rect x="60" y="51" width="60" height="78" rx="10" fill="none" stroke="#242021" stroke-width="6"/>
-<rect x="76" y="42" width="28" height="16" rx="6" fill="#242021"/>
-<line x1="72" y1="77" x2="108" y2="77" stroke="#242021" stroke-width="6" stroke-linecap="round"/>
-<line x1="72" y1="94" x2="108" y2="94" stroke="#242021" stroke-width="6" stroke-linecap="round"/>
-<line x1="72" y1="111" x2="96" y2="111" stroke="#242021" stroke-width="6" stroke-linecap="round"/>
-<defs>
-<filter id="filter0_d_clipboard" x="0" y="0" width="179.2" height="179.2" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
-<feFlood flood-opacity="0" result="BackgroundImageFix"/>
-<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
-<feOffset dy="4"/>
-<feGaussianBlur stdDeviation="8"/>
-<feComposite in2="hardAlpha" operator="out"/>
-<feColorMatrix type="matrix" values="0 0 0 0 0.239615 0 0 0 0 0.353433 0 0 0 0 0.599038 0 0 0 0.18 0"/>
-<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_clipboard"/>
-<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_clipboard" result="shape"/>
-</filter>
-</defs>
 </svg>`;
 }
 
@@ -2504,8 +2490,7 @@ function render() {
               </div>
             </div>`).join('')}
         </div>
-        <button class="chevron-btn" onclick="openRouteOverlay()" title="Ver ruta completa">${iconClipboard(66)}</button>
-      </div>` : `<div class="next-block"><button class="chevron-btn" style="margin-left:auto" onclick="openRouteOverlay()" title="Ver ruta completa">${iconClipboard(66)}</button></div>`}
+      </div>` : ''}
     </div>
     <div class="action-bar">
       <button id="msg-btn" class="round-btn" title="Mensaje">${iconMessage(90)}</button>
@@ -4175,6 +4160,72 @@ function openRouteOverlay() {
 }
 function closeRouteOverlay() { document.getElementById('route-overlay').classList.remove('show'); }
 
+// Deslizar hacia arriba en la pantalla principal abre la lista completa de ruta — mismo
+// espíritu que initCubeSwipeOpen (reemplaza al botón de clipboard que estaba arriba del
+// huevo): mismo umbral/DIRECTION_LOCK, así que no interfiere con los taps normales de esa
+// pantalla (next-row, botones, etc.), que casi no tienen movimiento. #route-overlay queda
+// siempre montado (ver esa clase) para poder arrastrarlo en vivo: la tarjeta sube desde
+// abajo y el fondo se oscurece a la par del dedo, no recién al soltar.
+function initRouteSwipeOpen() {
+  const area = document.getElementById('page-main');
+  const overlay = document.getElementById('route-overlay');
+  const card = overlay.querySelector('.overlay-card');
+  const DRAG_THRESHOLD = 70;
+  const DIRECTION_LOCK = 10;
+  let activePointerId = null, startX = null, startY = null, dy = 0, locked = null;
+
+  area.addEventListener('pointerdown', e => {
+    // #msg-btn (ver initMsgBtnEtaSwipe) ya captura este mismo puntero para su propio
+    // arrastre horizontal — capturarlo acá también se lo robaría a mitad de gesto.
+    if (e.target.closest('#msg-btn')) return;
+    if (activePointerId !== null) return; // segundo dedo — ignorar
+    activePointerId = e.pointerId;
+    startX = e.clientX; startY = e.clientY; dy = 0; locked = null;
+    // #route-overlay pasa a pointer-events:auto apenas se decide el gesto (ver abajo) —
+    // sin esta captura, el resto del arrastre (mousemove/mouseup reales, no despachados a
+    // mano) lo agarraría la propia hoja en vez de #page-main, por quedar encima de ella.
+    area.setPointerCapture(e.pointerId);
+  });
+  area.addEventListener('pointermove', e => {
+    if (e.pointerId !== activePointerId || locked === false) return;
+    const curDy = e.clientY - startY;
+    const curDx = e.clientX - startX;
+    if (locked === null) {
+      if (Math.abs(curDy) > DIRECTION_LOCK || Math.abs(curDx) > DIRECTION_LOCK) {
+        locked = Math.abs(curDy) > Math.abs(curDx) && curDy < 0;
+        if (locked) {
+          // Recién acá se sabe que es ESTE gesto (no un tap ni un drag horizontal) — se
+          // renderiza el contenido real de una sola vez, para que la vista previa en
+          // vivo muestre la lista de verdad y no una tarjeta vacía.
+          routeSelectedKey = null;
+          renderRouteOverlay();
+          overlay.classList.add('no-anim', 'show');
+        }
+      }
+    }
+    if (locked) {
+      e.preventDefault();
+      dy = curDy;
+      const closedY = card.offsetHeight || window.innerHeight;
+      const frac = Math.min(1, Math.max(0, -dy / closedY));
+      card.style.transform = `translateY(${closedY - frac * closedY}px)`;
+      overlay.style.opacity = String(frac);
+    }
+  });
+  const endDrag = e => {
+    if (e.pointerId !== activePointerId) return;
+    if (locked) {
+      overlay.classList.remove('no-anim');
+      card.style.transform = '';
+      overlay.style.opacity = '';
+      if (dy >= -DRAG_THRESHOLD) overlay.classList.remove('show'); // no llegó al umbral: vuelve a cerrado
+    }
+    activePointerId = null; locked = null;
+  };
+  area.addEventListener('pointerup', endDrag);
+  area.addEventListener('pointercancel', endDrag);
+}
+
 function setRouteFilter(f) { routeFilter = f; routeSelectedKey = null; renderRouteOverlay(); }
 
 function renderRouteOverlay() {
@@ -4510,6 +4561,7 @@ if (window.visualViewport) {
 initPager();
 initCubeSwipeOpen();
 initCubeSwipeClose();
+initRouteSwipeOpen();
 initCubeRotate();
 loadAll();
 setInterval(loadAll, 25000); // mismo espíritu que el auto-sync de 30s del CRM original
