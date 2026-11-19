@@ -286,10 +286,11 @@
   .body-pad {
     flex: 1; min-height: 0; display: flex; flex-direction: column;
     justify-content: space-between; padding: 40px 16px 12px;
-    /* Sin scroll a propósito — la pantalla principal no debe desplazarse. Si algún día el
-       contenido no entra (nota muy larga, pantalla muy chica), se recorta vía el
-       "overflow:hidden" de <main>/.pager-page en vez de volverse scrolleable; la
-       action-bar (mensaje/nota/huevo) igual queda afuera de este bloque — ver #content y
+    /* Sin scroll a propósito — la pantalla principal como un todo no debe desplazarse.
+       Si .client-block y .next-block (nombre/nota del cliente actual + próximos
+       clientes) no entran juntos, es .client-block quien cede y scrollea puertas
+       adentro (ver esa clase) — .next-block nunca se recorta. La action-bar
+       (mensaje/nota/huevo) igual queda afuera de este bloque — ver #content y
        .action-bar más abajo — así se queda pegada abajo de la pantalla pase lo que pase. */
     overflow: hidden;
   }
@@ -312,13 +313,17 @@
   .sku-qty { font-size: 45px; font-weight: 500; color: #FFEDD5; }
   .sku svg { display: block; }
 
-  .client-block { flex-shrink: 0; }
+  /* flex-shrink:1 + min-height:0 + overflow-y:auto (y NO flex-shrink:0 como antes): si el
+     nombre/dirección/nota de este cliente no entran enteros en lo que queda de pantalla,
+     ESTE bloque es el que cede — se vuelve scrolleable puertas adentro — en vez de
+     empujar/recortar a .next-block (ver esa clase), que necesita quedar siempre entero y
+     visible para que el próximo cliente de la ruta nunca quede tapado. */
+  .client-block { flex-shrink: 1; min-height: 0; overflow-y: auto; }
   .client-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
   .client-name { font-size: clamp(22px, 5.5vw, 28px); font-weight: 800; line-height: 1.2; }
   /* La nota tiene que leerse completa (no truncarla con "…") — por eso envuelve en vez
-     de ir en una sola línea. Si eso hace crecer el bloque más de lo que entra en
-     pantalla, .body-pad ya tiene su propia red de seguridad (overflow-y:auto) para
-     poder scrollear hasta la action-bar en vez de que quede recortada. */
+     de ir en una sola línea; si no entra entera, .client-block de arriba es quien
+     scrollea para mostrarla completa, sin tapar al próximo cliente. */
   .client-row { display: flex; justify-content: flex-start; align-items: flex-start; gap: 18px; margin-top: 8px; min-width: 0; }
   .waze-pin-btn { border: none; background: none; padding: 0; cursor: pointer; flex-shrink: 0; margin-right: 28px; }
   .waze-pin-btn:disabled { opacity: 0.5; }
