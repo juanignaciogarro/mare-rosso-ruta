@@ -303,7 +303,11 @@
   .counter-pill.dark { background: #fff; color: var(--orange); border: none; }
   .counter-label { font-weight: 400; margin-left: 2px; font-size: 15px; }
 
-  .delivery-card { display: flex; gap: 60px; align-items: flex-end; flex-wrap: wrap; margin-top: 36px; }
+  /* nowrap + transform-origin: nunca pasa a una segunda fila — si no entran todos en el
+     ancho disponible, fitDeliveryCard() (en JS) los achica a todos juntos con un
+     scale(), nunca envolviendo. transform-origin coincide con align-items:flex-end
+     (abajo) y con que el texto/los íconos arrancan pegados al borde izquierdo. */
+  .delivery-card { display: inline-flex; gap: 60px; align-items: flex-end; flex-wrap: nowrap; margin-top: 36px; transform-origin: left bottom; }
   .sku { display: flex; align-items: flex-end; gap: 10px; }
   .sku-qty { font-size: 45px; font-weight: 500; color: #FFEDD5; }
   .sku svg { display: block; }
@@ -1636,6 +1640,28 @@ function onConfirmClick(clienteId) {
 // mueve más de DIRECTION_LOCK px — así no interfiere con los taps normales (next-row,
 // botones, el link de dirección, etc.), que casi no tienen movimiento.
 let pagerIndex = 1;
+// #cube-sheet viaja CON el dashboard en vez de abrirse/cerrarse al cambiar de página: su
+// estado vertical (cubeSheetVertY/cubeSheetOpen, ver más abajo) nunca se toca acá — sólo
+// se la panea horizontalmente, en px, exactamente como el dashboard (página 0) dentro de
+// #pager. Resultado: si estaba abierta, sigue abierta "de fondo" mientras se desliza
+// fuera de cuadro junto con el dashboard, y vuelve a aparecer ya abierta al volver,
+// deslizándose de nuevo a cuadro con él — sin ninguna animación de abrir/cerrar propia en
+// el medio. renderCubeSheetTransform() combina este pan con cubeSheetVertY en un único
+// transform (translate X e Y no pueden pisarse entre sí si se asignan por separado).
+let cubeSheetPanX = pagerIndex === 0 ? 0 : -window.innerWidth;
+function renderCubeSheetTransform() {
+  document.getElementById('cube-sheet').style.transform = `translate(${cubeSheetPanX}px, ${cubeSheetVertY}px)`;
+}
+// Deja #pager Y el pan de #cube-sheet asentados en la posición de reposo de newIndex —
+// sirve tanto para confirmar un cambio de página como para revertir uno que no llegó al
+// umbral (ahí newIndex es el mismo pagerIndex de siempre, pero igual hace falta reasentar
+// el transform en vivo que dejó el arrastre).
+function goToPagerIndex(newIndex) {
+  pagerIndex = newIndex;
+  document.getElementById('pager').style.transform = `translateX(${-pagerIndex * 50}%)`;
+  cubeSheetPanX = pagerIndex === 0 ? 0 : -window.innerWidth;
+  renderCubeSheetTransform();
+}
 function initPager() {
   const pager = document.getElementById('pager');
   const SWIPE_THRESHOLD = 60;
@@ -1669,14 +1695,18 @@ function initPager() {
       dx = curDx;
       const basePct = -pagerIndex * 50;
       pager.style.transform = `translateX(${basePct + (dx / window.innerWidth) * 50}%)`;
+      // #cube-sheet viaja con el dashboard durante este arrastre también — ver el
+      // comentario grande de más arriba (cubeSheetPanX).
+      cubeSheetPanX = (pagerIndex === 0 ? 0 : -window.innerWidth) + dx;
+      renderCubeSheetTransform();
     }
   });
   const endDrag = () => {
     if (isSwipe) {
       pager.classList.remove('no-anim');
-      if (pagerIndex === 1 && dx > SWIPE_THRESHOLD) pagerIndex = 0;
-      else if (pagerIndex === 0 && dx < -SWIPE_THRESHOLD) pagerIndex = 1;
-      pager.style.transform = `translateX(${-pagerIndex * 50}%)`;
+      if (pagerIndex === 1 && dx > SWIPE_THRESHOLD) goToPagerIndex(0);
+      else if (pagerIndex === 0 && dx < -SWIPE_THRESHOLD) goToPagerIndex(1);
+      else goToPagerIndex(pagerIndex); // no llegó al umbral: reasienta pager+hoja en la página de antes
     }
     startX = null; isSwipe = null;
   };
@@ -1738,31 +1768,30 @@ function setDashHeaderCollapsed(collapsed) {
 // PROTOTIPO: pestaña del dashboard que se arrastra hacia arriba para revelar la
 // pantalla del cubo 3D, y el tirador propio de esa pantalla para volver a cerrarla.
 let cubeSheetOpen = false;
+// En px — 0 = abierta, window.innerHeight = cerrada (o cualquier valor intermedio
+// mientras se arrastra en vivo). Independiente de cubeSheetPanX (ver initPager) — juntos
+// forman el transform de #cube-sheet vía renderCubeSheetTransform(). Cambiar de página
+// (dashboard↔principal) ya NO toca esto para nada: la hoja se panea horizontalmente con
+// el dashboard, pero su apertura/cierre vertical es un gesto completamente aparte.
+let cubeSheetVertY = window.innerHeight;
 // Siempre arranca desde el mismo ángulo/zoom al abrir — si no, queda como la dejó el
 // último arrastre, aunque se haya cerrado y vuelto a abrir después. Los guardas
 // (if cubeSheetOpen/!cubeSheetOpen) evitan resetear la vista si ya estaba en ese estado
 // (ej. se arrastró el tirador un poco sin cruzar el umbral y volvió a quedar igual).
-function openCubeSheet() {
-  if (cubeSheetOpen) return;
-  cubeSheetOpen = true;
-  document.getElementById('cube-sheet').style.transform = 'translateY(0)';
-  setDashHeaderCollapsed(true); // además deja el margin-top de #cube-sheet-inner en su valor colapsado (cubeSheetOpenY)
-  resizeCubeRenderer(); // #cube-scene pudo medir mal en initCubeRotate() (al cargar, con la pestaña todavía fuera de pantalla) — remedir ahora
-  resetCubeView();
-  renderCrateIconsPanel();
+function setCubeSheetOpen(open) {
+  if (open === cubeSheetOpen) return;
+  cubeSheetOpen = open;
+  cubeSheetVertY = open ? 0 : window.innerHeight;
+  renderCubeSheetTransform();
+  setDashHeaderCollapsed(open);
+  if (open) {
+    resizeCubeRenderer(); // #cube-scene pudo medir mal en initCubeRotate() (al cargar, con la pestaña todavía fuera de pantalla) — remedir ahora
+    resetCubeView();
+    renderCrateIconsPanel();
+  }
 }
-function closeCubeSheet() {
-  if (!cubeSheetOpen) return;
-  cubeSheetOpen = false;
-  document.getElementById('cube-sheet').style.transform = 'translateY(100%)';
-  // La pantalla 3D solo se abre tirando de la pestaña del dashboard (ver
-  // #cube-pull-tab) — bajarla siempre vuelve al dashboard, nunca a la principal.
-  pagerIndex = 0;
-  document.getElementById('pager').style.transform = `translateX(${-pagerIndex * 50}%)`;
-  // cubeSheetOpen ya es false acá, así que esto sólo reacomoda el selector de
-  // semana/filtros — nunca toca el transform de la hoja (ya en 100%, afuera de pantalla).
-  setDashHeaderCollapsed(false);
-}
+function openCubeSheet() { setCubeSheetOpen(true); }
+function closeCubeSheet() { setCubeSheetOpen(false); }
 // El tirador angosto (pegado al borde) hacía que iOS/iPadOS confundiera el arrastre con
 // un gesto propio del sistema (mostrar el Dock/cambiar de app) y la pestaña "desaparecía"
 // a mitad de gesto. Reemplazado por un swipe de pantalla completa, mismo espíritu que el
@@ -1802,7 +1831,8 @@ function initCubeSwipeOpen() {
       // directo: de toda su propia altura (cerrada, abajo de todo) a 0 (abierta).
       const closedY = window.innerHeight;
       const frac = Math.min(1, Math.max(0, -dy / closedY));
-      sheet.style.transform = `translateY(${closedY - frac * closedY}px)`;
+      cubeSheetVertY = closedY - frac * closedY;
+      renderCubeSheetTransform();
     }
   });
   const endDrag = e => {
@@ -1810,7 +1840,7 @@ function initCubeSwipeOpen() {
     if (locked) {
       sheet.classList.remove('no-anim');
       if (dy < -DRAG_THRESHOLD) openCubeSheet();
-      else sheet.style.transform = 'translateY(100%)'; // no llegó al umbral: vuelve a cerrado
+      else { cubeSheetVertY = window.innerHeight; renderCubeSheetTransform(); } // no llegó al umbral: vuelve a cerrado
     }
     activePointerId = null; locked = null;
   };
@@ -1822,32 +1852,49 @@ function initCubeSwipeOpen() {
 // "Extras a bordo"). Si pudiera arrancar en cualquier parte, un swipe hacia abajo sobre
 // el modelo (para girarlo o tocar una caja) cerraría la pantalla sin querer — por eso la
 // franja del medio (.cube-scene) sigue afuera.
+//
+// Ese mismo touch target de arriba (tirador + fila Cargar Dino/Extras) además deslizado
+// HORIZONTALMENTE pasa del dashboard a la pantalla principal. La hoja sigue ABIERTA todo
+// el tiempo (cubeSheetVertY/cubeSheetOpen no se tocan para nada acá) — lo que se mueve es
+// su posición HORIZONTAL (cubeSheetPanX), en vivo, exactamente lo mismo que el dashboard
+// dentro de #pager: la hoja "viaja" con él, de fondo, saliendo de cuadro junto con la
+// pantalla en vez de cerrarse. Por eso al volver a deslizar hacia el dashboard (desde
+// cualquier parte — ya no hay tirador visible para arrastrar; lo cubre initPager) se la ve
+// ya abierta, entrando de nuevo a cuadro con la pantalla. Este gesto horizontal sólo se
+// habilita arrancando en la franja de ARRIBA — abajo (extras a bordo) sigue siendo solo
+// para cerrar verticalmente.
 function initCubeSwipeClose() {
   const sheet = document.getElementById('cube-sheet');
   const topZone = document.querySelector('.cube-load-bar');
   const bottomZone = document.getElementById('crate-icons-panel');
+  const pager = document.getElementById('pager');
   const DRAG_THRESHOLD = 70;
   const DIRECTION_LOCK = 10;
-  let activePointerId = null, startX = null, startY = null, dy = 0, locked = null;
+  let activePointerId = null, startX = null, startY = null, dx = 0, dy = 0;
+  // null = todavía sin decidir qué gesto es; 'close' = arrastre vertical hacia abajo;
+  // 'page' = arrastre horizontal (sólo si arrancó en topZone); false = descartado.
+  let gesture = null, startedInTop = false;
 
   sheet.addEventListener('pointerdown', e => {
-    if (activePointerId !== null) { locked = false; return; } // segundo dedo (pinch) — no es este gesto
+    if (activePointerId !== null) { gesture = false; return; } // segundo dedo (pinch) — no es este gesto
     activePointerId = e.pointerId;
-    startX = e.clientX; startY = e.clientY; dy = 0; locked = null;
-    const inTopZone = e.clientY <= topZone.getBoundingClientRect().bottom;
+    startX = e.clientX; startY = e.clientY; dx = 0; dy = 0; gesture = null;
+    startedInTop = e.clientY <= topZone.getBoundingClientRect().bottom;
     const inBottomZone = bottomZone && e.clientY >= bottomZone.getBoundingClientRect().top;
-    if (!inTopZone && !inBottomZone) locked = false;
+    if (!startedInTop && !inBottomZone) gesture = false;
   });
   sheet.addEventListener('pointermove', e => {
-    if (e.pointerId !== activePointerId || locked === false) return;
+    if (e.pointerId !== activePointerId || gesture === false) return;
     const curDy = e.clientY - startY;
     const curDx = e.clientX - startX;
-    if (locked === null) {
+    if (gesture === null) {
       if (Math.abs(curDy) > DIRECTION_LOCK || Math.abs(curDx) > DIRECTION_LOCK) {
-        locked = Math.abs(curDy) > Math.abs(curDx) && curDy > 0;
+        const vertical = Math.abs(curDy) > Math.abs(curDx);
+        if (vertical) gesture = curDy > 0 ? 'close' : false;
+        else gesture = startedInTop ? 'page' : false;
       }
     }
-    if (locked) {
+    if (gesture === 'close') {
       sheet.classList.add('no-anim');
       dy = curDy;
       // Igual que en initCubeSwipeOpen: #cube-sheet va de 0 (abierta) a toda su propia
@@ -1855,17 +1902,41 @@ function initCubeSwipeClose() {
       // #cube-sheet-inner, que no se toca durante este arrastre.
       const closedY = window.innerHeight;
       const frac = Math.min(1, Math.max(0, dy / closedY));
-      sheet.style.transform = `translateY(${frac * closedY}px)`;
+      cubeSheetVertY = frac * closedY;
+      renderCubeSheetTransform();
+    } else if (gesture === 'page') {
+      // Mismo límite que initPager: sólo se puede arrastrar hacia el lado que
+      // efectivamente tiene una página.
+      if (pagerIndex === 1 && curDx < 0) return;
+      if (pagerIndex === 0 && curDx > 0) return;
+      e.preventDefault();
+      pager.classList.add('no-anim');
+      sheet.classList.add('no-anim');
+      dx = curDx;
+      const basePct = -pagerIndex * 50;
+      pager.style.transform = `translateX(${basePct + (dx / window.innerWidth) * 50}%)`;
+      // La hoja viaja CON el dashboard — se panea en vivo, en px, lo mismo que la página
+      // 0 dentro de #pager (ver cubeSheetPanX más arriba). Su alto/bajo (cubeSheetVertY)
+      // no se toca para nada acá: sigue "arriba" todo el arrastre, de fondo, y vuelve a
+      // cuadro ya abierta si se desliza de nuevo hacia el dashboard.
+      cubeSheetPanX = (pagerIndex === 0 ? 0 : -window.innerWidth) + dx;
+      renderCubeSheetTransform();
     }
   });
   const endDrag = e => {
     if (e.pointerId !== activePointerId) return;
-    if (locked) {
+    if (gesture === 'close') {
       sheet.classList.remove('no-anim');
       if (dy > DRAG_THRESHOLD) closeCubeSheet();
-      else sheet.style.transform = 'translateY(0)'; // no llegó al umbral: vuelve a abierto
+      else { cubeSheetVertY = 0; renderCubeSheetTransform(); } // no llegó al umbral: vuelve a abierto
+    } else if (gesture === 'page') {
+      pager.classList.remove('no-anim');
+      sheet.classList.remove('no-anim');
+      if (pagerIndex === 0 && dx < -DRAG_THRESHOLD) goToPagerIndex(1);
+      else if (pagerIndex === 1 && dx > DRAG_THRESHOLD) goToPagerIndex(0);
+      else goToPagerIndex(pagerIndex); // no llegó al umbral: reasienta pager+hoja en la página de antes
     }
-    activePointerId = null; locked = null;
+    activePointerId = null; gesture = null;
   };
   sheet.addEventListener('pointerup', endDrag);
   sheet.addEventListener('pointercancel', endDrag);
@@ -1883,7 +1954,11 @@ let selectedCrateName = null;
 // tronco decorativo que se superpone a la caja del volumen 2 (crate_bed_2).
 const CRATE_TAP_PROXIES = { 'low2_ret (1)': 'crate_bed_2' };
 const DEFAULT_CUBE_ROT = { x: 0.3, y: Math.PI - 0.6 };
-const DEFAULT_CUBE_DIST = 5;
+// El tamaño aparente de un objeto con cámara en perspectiva es ~ inversamente
+// proporcional a la distancia (ver el cálculo de "h" más abajo, en initCubeRotate) —
+// achicar la distancia un 1/1.3 agranda el auto un 30% sin tocar el zoom mínimo/máximo
+// (1.5 a 12, ver los pellizco/rueda de más abajo).
+const DEFAULT_CUBE_DIST = 5 / 1.3;
 let resetCubeView = () => {}; // se asigna de verdad dentro de initCubeRotate, una vez que existen pivot/camera
 // Vuelve a medir #cube-scene y ajustar el tamaño del renderer — se asigna de verdad dentro
 // de initCubeRotate. Esta corre una sola vez al cargar la página (vía window 'resize'),
@@ -2333,6 +2408,23 @@ function addrHTML(notas) {
 // ═══════════════════════════════════════════════
 // Main screen render
 // ═══════════════════════════════════════════════
+// .delivery-card (los SKU de la entrega actual, arriba a la izquierda de la tarjeta
+// naranja) nunca pasa a una segunda fila (flex-wrap:nowrap, ver esa clase) — si con 3+
+// SKU no entran todos en el ancho disponible, se achican TODOS JUNTOS con un transform
+// scale() en vez de envolver o recortarse. display:inline-flex en esa clase hace que su
+// propio ancho natural (offsetWidth, sin el scale de una pasada anterior) sea
+// directamente el ancho que necesitarían sin achicar — de ahí sale la proporción.
+function fitDeliveryCard() {
+  const card = document.querySelector('.delivery-card');
+  if (!card) return;
+  card.style.transform = '';
+  const hero = card.closest('.hero');
+  if (!hero) return;
+  const style = getComputedStyle(hero);
+  const available = hero.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  const natural = card.offsetWidth;
+  if (natural > available && available > 0) card.style.transform = `scale(${available / natural})`;
+}
 function render() {
   renderDashboard();
   const stops = buildStops(selectedDay);
@@ -2425,6 +2517,7 @@ function render() {
   setActionBar(active.cliente);
   initNextRowGestures();
   initMsgBtnEtaSwipe();
+  fitDeliveryCard();
 }
 
 // ═══════════════════════════════════════════════
@@ -4401,14 +4494,17 @@ function positionCubeSheet() {
   cubeSheetOpenY = Math.round(bottom + 10);
   if (cubeSheetOpen) inner.style.marginTop = `${cubeSheetOpenY}px`;
 }
+// goToPagerIndex(pagerIndex) acá no cambia de página — sólo reasienta #pager y el pan de
+// #cube-sheet (cubeSheetPanX, en px) con el window.innerWidth que haya quedado tras el
+// resize/rotación, para que la hoja no quede paneada con una medida vieja.
 setAppHeight();
 positionCubeSheet();
-window.addEventListener('resize', () => { setAppHeight(); positionCubeSheet(); });
-window.addEventListener('orientationchange', () => { setAppHeight(); positionCubeSheet(); });
-window.addEventListener('pageshow', () => { setAppHeight(); positionCubeSheet(); });
-document.addEventListener('visibilitychange', () => { if (!document.hidden) { setAppHeight(); positionCubeSheet(); } });
+window.addEventListener('resize', () => { setAppHeight(); positionCubeSheet(); goToPagerIndex(pagerIndex); fitDeliveryCard(); });
+window.addEventListener('orientationchange', () => { setAppHeight(); positionCubeSheet(); goToPagerIndex(pagerIndex); fitDeliveryCard(); });
+window.addEventListener('pageshow', () => { setAppHeight(); positionCubeSheet(); goToPagerIndex(pagerIndex); fitDeliveryCard(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { setAppHeight(); positionCubeSheet(); goToPagerIndex(pagerIndex); fitDeliveryCard(); } });
 if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', () => { setAppHeight(); positionCubeSheet(); });
+  window.visualViewport.addEventListener('resize', () => { setAppHeight(); positionCubeSheet(); goToPagerIndex(pagerIndex); fitDeliveryCard(); });
 }
 
 initPager();
