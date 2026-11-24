@@ -932,7 +932,6 @@ const DAY_LABEL = { lunes: 'Lun', martes: 'Mar', miercoles: 'Mié', pickup: 'Pic
 let CLIENTES = [];
 let PEDIDOS = [];
 let CONFIRMACIONES = {};
-let RUTA_ORDERS = {};
 let APODOS = {};
 let ENTREGA_TS = {}; // marca de tiempo de cada entrega, para ordenar "Entregados" por mas reciente primero
 let selectedDay = todayDefaultDay();
@@ -954,7 +953,6 @@ let STOPS_BY_ID = {};
 const wk = getWeekDates(0);
 
 function getConf(clienteId) { return CONFIRMACIONES[`${wk.key}_${clienteId}`] || null; }
-function getRutaOrder(dia) { return RUTA_ORDERS[`ruta_order_${wk.key}_${dia}`] || null; }
 function getApodo(clienteId) { return APODOS[clienteId] || ''; }
 function getEntregaTs(clienteId) { return ENTREGA_TS[`${wk.key}_${clienteId}`] || 0; }
 
@@ -1414,10 +1412,9 @@ async function loadAll() {
     ]);
     CLIENTES = clientes;
     PEDIDOS = pedidos;
-    CONFIRMACIONES = {}; RUTA_ORDERS = {}; APODOS = {}; ENTREGA_TS = {};
+    CONFIRMACIONES = {}; APODOS = {}; ENTREGA_TS = {};
     kv.forEach(row => {
       if (row.key === 'CONFIRMACIONES') { try { CONFIRMACIONES = JSON.parse(row.value || '{}'); } catch (e) {} }
-      if (row.key === 'ruta_orders') { try { RUTA_ORDERS = JSON.parse(row.value || '{}'); } catch (e) {} }
       if (row.key === 'apodos') { try { APODOS = JSON.parse(row.value || '{}'); } catch (e) {} }
       if (row.key === 'entrega_ts') { try { ENTREGA_TS = JSON.parse(row.value || '{}'); } catch (e) {} }
       if (row.key === 'carga_dino_state' && !CARGA_DINO_STATE_RESTORED) {
@@ -1461,19 +1458,24 @@ async function loadAll() {
 // Build stop list for selected day — misma fuente que Hoja de Ruta:
 // CLIENTES + CONFIRMACIONES (no depende de que pedidos esté generado)
 // ═══════════════════════════════════════════════
+// El orden de la ruta vive en clientes.orden_<dia> (columna por día, persiste entre
+// semanas — ver genesisIndexOrden() más abajo para la carga inicial). Sin índice todavía
+// (cliente nuevo, o nunca confirmado antes) va SIEMPRE arriba de todo, para que salte a
+// la vista y alguien lo reordene a mano cuanto antes — ver persistNewOrder().
 function buildStops(dia) {
   let confirmed = CLIENTES.filter(c => {
     if (c.estado !== 'activo' || c.ruta !== dia) return false;
     const conf = getConf(c.id);
     return conf && (conf.estado === 'confirmado' || conf.estado === 'cambio');
   });
-  const order = getRutaOrder(dia);
-  if (order && order.length) {
-    const sorted = [];
-    order.forEach(id => { const c = confirmed.find(x => x.id === id); if (c) sorted.push(c); });
-    confirmed.forEach(c => { if (!sorted.includes(c)) sorted.push(c); });
-    confirmed = sorted;
-  }
+  const ordenKey = 'orden_' + dia;
+  confirmed = [...confirmed].sort((a, b) => {
+    const oa = a[ordenKey], ob = b[ordenKey];
+    if (oa == null && ob == null) return 0;
+    if (oa == null) return -1;
+    if (ob == null) return 1;
+    return oa - ob;
+  });
   return confirmed.map(c => {
     const conf = getConf(c.id);
     const pedido = PEDIDOS.find(p => p.id === c.id);
@@ -4581,14 +4583,58 @@ function initRouteDragDrop() {
   });
 }
 
+// Renumera TODO el orden de ese día (1..N, pendientes recién arrastrados + entregados al
+// final, igual que antes) y lo persiste directo en clientes.orden_<dia> — ya no en
+// kv_store, para que sobreviva entre semanas (ver buildStops()). Actualiza CLIENTES en
+// memoria de una (antes del round-trip a Supabase) para que el repintado de abajo ya
+// muestre el orden nuevo, sin esperar al próximo poll.
 function persistNewOrder(newPendingOrder) {
   const stops = buildStops(selectedDay);
   const doneIds = stops.filter(s => s.entregado).map(s => s.cliente.id);
-  const key = `ruta_order_${wk.key}_${selectedDay}`;
-  RUTA_ORDERS[key] = [...newPendingOrder, ...doneIds];
-  sbUpsert('kv_store', { key: 'ruta_orders', value: JSON.stringify(RUTA_ORDERS) }).catch(e => console.error(e));
+  const ordenKey = 'orden_' + selectedDay;
+  const fullOrder = [...newPendingOrder, ...doneIds];
+  const updates = fullOrder.map((id, i) => ({ id, [ordenKey]: i + 1 }));
+  updates.forEach(u => {
+    const c = CLIENTES.find(x => x.id === u.id);
+    if (c) c[ordenKey] = u[ordenKey];
+  });
+  sbUpsert('clientes', updates).catch(e => console.error(e));
   render();
   renderRouteOverlay();
+}
+
+// Carga inicial (una sola vez, a mano desde la consola): le asigna a cada cliente activo
+// su posición ACTUAL en la ruta de hoy (1..N por día) — reconstruye el viejo orden de
+// kv_store (ruta_orders, por semana) en vez de usar buildStops() de arriba, que ya dejó
+// de leerlo (el índice nuevo vive en clientes.orden_<dia>, y acá es justamente donde se
+// carga por primera vez). Los clientes que no aparecen confirmados hoy quedan sin índice
+// todavía (null) — la próxima vez que confirmen, entran arriba de todo, como cualquier
+// cliente nunca antes ordenado (ver buildStops/persistNewOrder más arriba).
+async function genesisIndexOrden() {
+  const kv = await sbGet('kv_store', 'key=eq.ruta_orders&select=value');
+  let rutaOrders = {};
+  if (kv[0]) { try { rutaOrders = JSON.parse(kv[0].value || '{}'); } catch (e) {} }
+  const dias = ['lunes', 'martes', 'miercoles', 'pickup'];
+  const updates = [];
+  dias.forEach(dia => {
+    const ordenKey = 'orden_' + dia;
+    let confirmed = CLIENTES.filter(c => {
+      if (c.estado !== 'activo' || c.ruta !== dia) return false;
+      const conf = getConf(c.id);
+      return conf && (conf.estado === 'confirmado' || conf.estado === 'cambio');
+    });
+    const storedOrder = rutaOrders[`ruta_order_${wk.key}_${dia}`];
+    if (storedOrder && storedOrder.length) {
+      const sorted = [];
+      storedOrder.forEach(id => { const c = confirmed.find(x => x.id === id); if (c) sorted.push(c); });
+      confirmed.forEach(c => { if (!sorted.includes(c)) sorted.push(c); });
+      confirmed = sorted;
+    }
+    confirmed.forEach((c, i) => updates.push({ id: c.id, [ordenKey]: i + 1 }));
+  });
+  if (!updates.length) { console.log('genesisIndexOrden: nada para indexar'); return; }
+  await sbUpsert('clientes', updates);
+  console.log(`genesisIndexOrden: ${updates.length} clientes indexados`, updates);
 }
 
 // ═══════════════════════════════════════════════
