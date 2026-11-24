@@ -285,14 +285,31 @@
   }
   .body-pad {
     flex: 1; min-height: 0; display: flex; flex-direction: column;
-    justify-content: space-between; padding: 40px 16px 12px;
-    /* Sin scroll a propósito — la pantalla principal como un todo no debe desplazarse.
-       Si .client-block y .next-block (nombre/nota del cliente actual + próximos
-       clientes) no entran juntos, es .client-block quien cede y scrollea puertas
-       adentro (ver esa clase) — .next-block nunca se recorta. La action-bar
-       (mensaje/nota/huevo) igual queda afuera de este bloque — ver #content y
-       .action-bar más abajo — así se queda pegada abajo de la pantalla pase lo que pase. */
-    overflow: hidden;
+    /* flex-start + gap fijo (no space-between): .next-block va pegado a client-block con
+       un espacio fijo entre los dos, en vez de estirado hasta el fondo de .body-pad — el
+       espacio que sobra (si sobra) queda abajo de todo, antes de la action-bar, no en el
+       medio. Con space-between ese hueco del medio se notaba mucho de más una vez que
+       fitBodyPad() achica todo (ver abajo): la proporción de espacio vacío crecía con el
+       achique en vez de quedarse fija. */
+    justify-content: flex-start; gap: 28px; padding: 40px 16px 12px;
+    /* Sin scroll a propósito — la pantalla principal como un todo no debe desplazarse, y
+       nada adentro (nombre/nota del cliente actual, próximos clientes) se recorta ni
+       queda escondido detrás de un scroll que haya que descubrir: si .client-block +
+       .next-block no entran juntos, fitBodyPad() (en JS) los achica a los DOS JUNTOS con
+       un transform:scale(), igual que fitDeliveryCard() ya hace con los SKU de arriba.
+       A propósito SIN overflow:hidden acá — el recorte de overflow se calcula sobre el
+       layout SIN transformar (antes de aplicar el scale), así que con overflow:hidden
+       puesto, cualquier contenido que no entrara en el alto normal quedaría recortado
+       ANTES de achicarse, y el scale sólo terminaba encogiendo esa versión ya mutilada.
+       Sin overflow:hidden, el contenido se dibuja completo y el scale lo encoge entero
+       para que entre, sin perder nada. La action-bar (mensaje/nota/huevo) igual queda
+       afuera de este bloque — ver #content y .action-bar más abajo — así se queda pegada
+       abajo de la pantalla pase lo que pase. top left (no top center): fitBodyPad()
+       ensancha este elemento (ancho inline en px) ANTES de achicarlo con scale(), para
+       que el texto envuelva menos y haga falta achicar menos — top left hace que ese
+       ensanche/achique quede anclado al borde izquierdo, donde el contenido ya arranca
+       (todo alineado a la izquierda), en vez de desplazarlo del centro. */
+    transform-origin: top left;
   }
 
   .counter-bar { display: flex; align-items: center; gap: 8px; color: #fff; margin-top: 30px; }
@@ -313,17 +330,12 @@
   .sku-qty { font-size: 45px; font-weight: 500; color: #FFEDD5; }
   .sku svg { display: block; }
 
-  /* flex-shrink:1 + min-height:0 + overflow-y:auto (y NO flex-shrink:0 como antes): si el
-     nombre/dirección/nota de este cliente no entran enteros en lo que queda de pantalla,
-     ESTE bloque es el que cede — se vuelve scrolleable puertas adentro — en vez de
-     empujar/recortar a .next-block (ver esa clase), que necesita quedar siempre entero y
-     visible para que el próximo cliente de la ruta nunca quede tapado. */
-  .client-block { flex-shrink: 1; min-height: 0; overflow-y: auto; }
+  .client-block { flex-shrink: 0; }
   .client-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
   .client-name { font-size: clamp(22px, 5.5vw, 28px); font-weight: 800; line-height: 1.2; }
   /* La nota tiene que leerse completa (no truncarla con "…") — por eso envuelve en vez
-     de ir en una sola línea; si no entra entera, .client-block de arriba es quien
-     scrollea para mostrarla completa, sin tapar al próximo cliente. */
+     de ir en una sola línea; si no entra entera junto con .next-block, fitBodyPad() (ver
+     .body-pad) achica toda la pantalla para que entre completa, en vez de truncarla. */
   .client-row { display: flex; justify-content: flex-start; align-items: flex-start; gap: 18px; margin-top: 8px; min-width: 0; }
   .waze-pin-btn { border: none; background: none; padding: 0; cursor: pointer; flex-shrink: 0; margin-right: 28px; }
   .waze-pin-btn:disabled { opacity: 0.5; }
@@ -2423,6 +2435,62 @@ function fitDeliveryCard() {
   const natural = card.offsetWidth;
   if (natural > available && available > 0) card.style.transform = `scale(${available / natural})`;
 }
+
+// .client-block (nombre/zona/dirección/nota del cliente actual) + .next-block (próximos
+// clientes) nunca se recortan ni esconden detrás de un scroll — si juntos no entran en lo
+// que queda de pantalla, TODO .body-pad se achica con un transform:scale() (igual
+// espíritu que fitDeliveryCard() de arriba) hasta que entre completo.
+//
+// Un scale() chico a secas desaprovecha ancho: el texto ya envolvió (quebró línea) al
+// ancho NORMAL de pantalla, y encogerlo entero (ancho y alto por igual) no cambia en qué
+// palabra se cortó cada línea — sólo lo hace todo más chico, cuando de ancho sobraba. Acá
+// en cambio, antes de achicar, se lo ENSANCHA de mentira (ancho inline en px, más angosto
+// que ancho real): con más ancho el texto envuelve MENOS (menos líneas = menos alto), y
+// RECIÉN ESE resultado más ancho y más bajo se encoge de vuelta al ancho real de
+// pantalla — como el ancho también se achica en la misma proporción, el resultado final
+// vuelve a ocupar el 100% del ancho, pero con un alto natural más corto de entrada, así
+// que hace falta achicar bastante menos para que la altura entre.
+function fitBodyPad() {
+  const pad = document.querySelector('.body-pad');
+  if (!pad) return;
+  pad.style.width = '';
+  pad.style.transform = '';
+  const style = getComputedStyle(pad);
+  const paddingY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+  const gapY = parseFloat(style.rowGap) || 0;
+  const availableH = pad.clientHeight;
+  const availableW = pad.clientWidth;
+  // + gapY*(n-1): el "gap" del flex (ver .body-pad) separa a los hijos entre sí, aparte
+  // de lo que mide cada uno — sin sumarlo acá, el alto natural salía corto y el scale
+  // terminaba quedando un poco más grande de lo que debía (y algo se pasaba de largo).
+  const measureHeight = () => {
+    const kids = [...pad.children];
+    return kids.reduce((sum, child) => sum + child.offsetHeight, 0) + paddingY + gapY * Math.max(0, kids.length - 1);
+  };
+
+  const naturalH = measureHeight();
+  if (naturalH <= availableH || availableH <= 0) return; // ya entra tal cual — nada que hacer
+
+  let bestWidth = availableW, bestScaledH = naturalH; // peor caso: sin ensanchar, scale 1
+  const maxWidth = availableW * 2.5; // tope — pasado este punto, ensanchar más no suele ganar más líneas
+  const step = Math.max(availableW * 0.08, 12);
+  for (let w = availableW + step; w <= maxWidth; w += step) {
+    pad.style.width = `${w}px`;
+    const h = measureHeight();
+    const scale = availableW / w;
+    const scaledH = h * scale;
+    if (scaledH < bestScaledH) { bestScaledH = scaledH; bestWidth = w; }
+    if (scaledH <= availableH) break; // ya alcanza con este ancho — no hace falta ensanchar más
+  }
+
+  pad.style.width = `${bestWidth}px`;
+  const finalHeight = measureHeight();
+  // tope duro: nunca más grande que 1 ni más chico de lo que hace falta para que ENTRE la
+  // altura (por si ni ensanchando al máximo alcanzó) — así nunca se recorta nada.
+  const scale = Math.min(1, availableW / bestWidth, availableH / finalHeight);
+  pad.style.transform = `scale(${scale})`;
+}
+
 function render() {
   renderDashboard();
   const stops = buildStops(selectedDay);
@@ -2515,6 +2583,7 @@ function render() {
   initNextRowGestures();
   initMsgBtnEtaSwipe();
   fitDeliveryCard();
+  fitBodyPad();
 }
 
 // ═══════════════════════════════════════════════
@@ -3791,12 +3860,14 @@ function sendTemplateMessage(id, which) {
   const wa = waUrl(c);
   if (!wa) { toast('⚠️ Cliente sin teléfono'); return; }
   openExternal(wa + '?text=' + encodeURIComponent(text));
+  closeMessageOverlay();
 }
 function openWhatsAppChat(id) {
   const c = STOPS_BY_ID[id].cliente;
   const wa = waUrl(c);
   if (!wa) { toast('⚠️ Cliente sin teléfono'); return; }
   openExternal(wa);
+  closeMessageOverlay();
 }
 
 // ═══════════════════════════════════════════════
@@ -4669,12 +4740,12 @@ function positionCubeSheet() {
 // resize/rotación, para que la hoja no quede paneada con una medida vieja.
 setAppHeight();
 positionCubeSheet();
-window.addEventListener('resize', () => { setAppHeight(); positionCubeSheet(); goToPagerIndex(pagerIndex); fitDeliveryCard(); });
-window.addEventListener('orientationchange', () => { setAppHeight(); positionCubeSheet(); goToPagerIndex(pagerIndex); fitDeliveryCard(); });
-window.addEventListener('pageshow', () => { setAppHeight(); positionCubeSheet(); goToPagerIndex(pagerIndex); fitDeliveryCard(); });
-document.addEventListener('visibilitychange', () => { if (!document.hidden) { setAppHeight(); positionCubeSheet(); goToPagerIndex(pagerIndex); fitDeliveryCard(); } });
+window.addEventListener('resize', () => { setAppHeight(); positionCubeSheet(); goToPagerIndex(pagerIndex); fitDeliveryCard(); fitBodyPad(); });
+window.addEventListener('orientationchange', () => { setAppHeight(); positionCubeSheet(); goToPagerIndex(pagerIndex); fitDeliveryCard(); fitBodyPad(); });
+window.addEventListener('pageshow', () => { setAppHeight(); positionCubeSheet(); goToPagerIndex(pagerIndex); fitDeliveryCard(); fitBodyPad(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { setAppHeight(); positionCubeSheet(); goToPagerIndex(pagerIndex); fitDeliveryCard(); fitBodyPad(); } });
 if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', () => { setAppHeight(); positionCubeSheet(); goToPagerIndex(pagerIndex); fitDeliveryCard(); });
+  window.visualViewport.addEventListener('resize', () => { setAppHeight(); positionCubeSheet(); goToPagerIndex(pagerIndex); fitDeliveryCard(); fitBodyPad(); });
 }
 
 initPager();
