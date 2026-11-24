@@ -2446,18 +2446,21 @@ function fitDeliveryCard() {
 
 // .client-block (nombre/zona/dirección/nota del cliente actual) + .next-block (próximos
 // clientes) nunca se recortan ni esconden detrás de un scroll — si juntos no entran en lo
-// que queda de pantalla, TODO .body-pad se achica con un transform:scale() (igual
-// espíritu que fitDeliveryCard() de arriba) hasta que entre completo.
+// que queda de pantalla, TODO .body-pad se achica con un transform:scale() hasta que
+// entre completo (igual espíritu que fitDeliveryCard() de arriba) — y si en cambio SOBRA
+// espacio, se agranda hasta un 15% (TARGET_SCALE), para aprovecharlo en vez de dejarlo
+// vacío (ver justify-content:center en .body-pad, que ya reparte ese sobrante arriba y
+// abajo — esto además lo aprovecha agrandando el contenido).
 //
-// Un scale() chico a secas desaprovecha ancho: el texto ya envolvió (quebró línea) al
-// ancho NORMAL de pantalla, y encogerlo entero (ancho y alto por igual) no cambia en qué
-// palabra se cortó cada línea — sólo lo hace todo más chico, cuando de ancho sobraba. Acá
-// en cambio, antes de achicar, se lo ENSANCHA de mentira (ancho inline en px, más angosto
-// que ancho real): con más ancho el texto envuelve MENOS (menos líneas = menos alto), y
-// RECIÉN ESE resultado más ancho y más bajo se encoge de vuelta al ancho real de
-// pantalla — como el ancho también se achica en la misma proporción, el resultado final
-// vuelve a ocupar el 100% del ancho, pero con un alto natural más corto de entrada, así
-// que hace falta achicar bastante menos para que la altura entre.
+// Un scale() a secas (achicando o agrandando) desaprovecha ancho: el texto ya envolvió
+// (quebró línea) al ancho NORMAL de pantalla, y escalarlo entero (ancho y alto por igual)
+// no cambia en qué palabra se cortó cada línea — sólo lo hace más chico o más grande,
+// chocándose contra el ancho real antes de lo necesario. Acá en cambio, ANTES de
+// escalar, se prueban distintos anchos de mentira (ancho inline en px): más angosto para
+// agrandar (menos ancho real "detrás" del escalado hacia arriba) o más ancho para achicar
+// (menos líneas envueltas, ver detalle de más abajo) — y RECIÉN ESE resultado se escala
+// de vuelta al ancho real de pantalla. Como el ancho se escala en la misma proporción que
+// el alto, el resultado final siempre vuelve a ocupar el 100% del ancho disponible.
 function fitBodyPad() {
   const pad = document.querySelector('.body-pad');
   if (!pad) return;
@@ -2468,6 +2471,7 @@ function fitBodyPad() {
   const gapY = parseFloat(style.rowGap) || 0;
   const availableH = pad.clientHeight;
   const availableW = pad.clientWidth;
+  if (availableH <= 0 || availableW <= 0) return;
   // + gapY*(n-1): el "gap" del flex (ver .body-pad) separa a los hijos entre sí, aparte
   // de lo que mide cada uno — sin sumarlo acá, el alto natural salía corto y el scale
   // terminaba quedando un poco más grande de lo que debía (y algo se pasaba de largo).
@@ -2476,26 +2480,22 @@ function fitBodyPad() {
     return kids.reduce((sum, child) => sum + child.offsetHeight, 0) + paddingY + gapY * Math.max(0, kids.length - 1);
   };
 
-  const naturalH = measureHeight();
-  if (naturalH <= availableH || availableH <= 0) return; // ya entra tal cual — nada que hacer
-
-  let bestWidth = availableW, bestScaledH = naturalH; // peor caso: sin ensanchar, scale 1
-  const maxWidth = availableW * 2.5; // tope — pasado este punto, ensanchar más no suele ganar más líneas
-  const step = Math.max(availableW * 0.08, 12);
-  for (let w = availableW + step; w <= maxWidth; w += step) {
+  const TARGET_SCALE = 1.15; // "tamaño ideal" ahora que suele sobrar aire — se prueba primero, de mayor a menor
+  const MIN_SCALE = 0.3; // piso — por debajo de esto ensanchar ya no suele ganar más líneas
+  let bestScale = null;
+  for (let s = TARGET_SCALE; s >= MIN_SCALE; s -= (s > 1 ? 0.025 : 0.02)) {
+    const w = availableW / s;
     pad.style.width = `${w}px`;
     const h = measureHeight();
-    const scale = availableW / w;
-    const scaledH = h * scale;
-    if (scaledH < bestScaledH) { bestScaledH = scaledH; bestWidth = w; }
-    if (scaledH <= availableH) break; // ya alcanza con este ancho — no hace falta ensanchar más
+    if (h * s <= availableH) { bestScale = s; break; } // el mayor scale que ya entra — no hace falta seguir probando más chicos
   }
+  if (bestScale === null) bestScale = MIN_SCALE; // ni agrandado ni achicado hasta el piso alcanzó — mejor esfuerzo
 
-  pad.style.width = `${bestWidth}px`;
+  pad.style.width = `${availableW / bestScale}px`;
   const finalHeight = measureHeight();
-  // tope duro: nunca más grande que 1 ni más chico de lo que hace falta para que ENTRE la
-  // altura (por si ni ensanchando al máximo alcanzó) — así nunca se recorta nada.
-  const scale = Math.min(1, availableW / bestWidth, availableH / finalHeight);
+  // tope duro de última instancia: si ni en el piso probado entraba, lo achica lo que
+  // haga falta para que la altura entre sí o sí — nunca se recorta ni se esconde nada.
+  const scale = Math.min(bestScale, availableH / finalHeight);
   pad.style.transform = `scale(${scale})`;
 }
 
