@@ -4674,11 +4674,19 @@ function persistNewOrder(newPendingOrder) {
   const doneIds = stops.filter(s => s.entregado).map(s => s.cliente.id);
   const ordenKey = 'orden_' + selectedDay;
   const fullOrder = [...newPendingOrder, ...doneIds];
-  const updates = fullOrder.map((id, i) => ({ id, [ordenKey]: i + 1 }));
-  updates.forEach(u => {
-    const c = CLIENTES.find(x => x.id === u.id);
-    if (c) c[ordenKey] = u[ordenKey];
-  });
+  // Manda la FILA COMPLETA de cada cliente (no sólo {id, orden_<dia>}) — Supabase/PostgREST
+  // no reconoce un upsert de columnas parciales como "actualizar la fila que ya existe"
+  // (en vez de eso intenta INSERTAR una fila nueva, que sale con error porque le faltan
+  // columnas NOT NULL como nombre) — así quedó descubierto corriendo a mano la carga
+  // inicial (ver genesisIndexOrden). Sin esto, el arrastre se veía bien en el momento
+  // pero el error quedaba silencioso (sólo console.error) y el próximo poll de 25s
+  // volvía a traer el orden viejo de Supabase, pisando el cambio que nunca se guardó.
+  const updates = fullOrder.map((id, i) => {
+    const c = CLIENTES.find(x => x.id === id);
+    if (!c) return null;
+    c[ordenKey] = i + 1; // reflejar en memoria ya mismo, antes del round-trip a Supabase
+    return { ...c };
+  }).filter(Boolean);
   sbUpsert('clientes', updates).catch(e => console.error(e));
   render();
   renderRouteOverlay();
@@ -4696,8 +4704,8 @@ async function genesisIndexOrden() {
   let rutaOrders = {};
   if (kv[0]) { try { rutaOrders = JSON.parse(kv[0].value || '{}'); } catch (e) {} }
   const dias = ['lunes', 'martes', 'miercoles', 'pickup'];
-  const updates = [];
-  dias.forEach(dia => {
+  let total = 0;
+  for (const dia of dias) {
     const ordenKey = 'orden_' + dia;
     let confirmed = CLIENTES.filter(c => {
       if (c.estado !== 'activo' || c.ruta !== dia) return false;
@@ -4711,11 +4719,17 @@ async function genesisIndexOrden() {
       confirmed.forEach(c => { if (!sorted.includes(c)) sorted.push(c); });
       confirmed = sorted;
     }
-    confirmed.forEach((c, i) => updates.push({ id: c.id, [ordenKey]: i + 1 }));
-  });
-  if (!updates.length) { console.log('genesisIndexOrden: nada para indexar'); return; }
-  await sbUpsert('clientes', updates);
-  console.log(`genesisIndexOrden: ${updates.length} clientes indexados`, updates);
+    if (!confirmed.length) continue;
+    // Fila completa por cliente (no sólo {id, orden_<dia>}) — ver el comentario de
+    // persistNewOrder más arriba sobre por qué un upsert de columnas parciales falla. Un
+    // sbUpsert por día (no uno combinado para los 4): PostgREST exige que todas las filas
+    // de una misma llamada tengan las MISMAS columnas, y acá cada día escribe una
+    // columna orden_<dia> distinta.
+    const rows = confirmed.map((c, i) => { c[ordenKey] = i + 1; return { ...c }; });
+    await sbUpsert('clientes', rows);
+    total += rows.length;
+  }
+  console.log(`genesisIndexOrden: ${total} clientes indexados`);
 }
 
 // ═══════════════════════════════════════════════
